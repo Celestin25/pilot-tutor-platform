@@ -80,15 +80,25 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
   }
 
   if (body.action === "delete") {
-    // Only invitations that were never used: no session, no allocation consumed, no chat data.
+    // Default: only never-used invitations. With force=true also started/ended participants
+    // (session + messages removed; allocation slot stays consumed so the sequence is not reshuffled).
     const deleted = [], kept = [];
+    const c = await db();
     for (const id of ids) {
-      const r = await q(
-        `DELETE FROM participants WHERE participant_id=? AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.participant_id=?)`,
-        [id, id]
-      );
-      if (r.rowsAffected) { deleted.push(id); await logEvent({ participant_id: id, type: "participant_deleted", details: { reason: String(body.reason || "").slice(0, 300) }, admin }); }
-      else kept.push(id);
+      const s = await getSession(id);
+      if (s && !body.force) { kept.push(id); continue; }
+      const summary = s ? {
+        session_id: s.session_id, condition: s.condition, status: s.status, started_at: s.started_at, ended_at: s.ended_at, end_reason: s.end_reason,
+        messages: Number((await one(`SELECT COUNT(*) AS n FROM messages WHERE session_id=?`, [s.session_id])).n),
+      } : null;
+      await c.batch([
+        { sql: `DELETE FROM messages WHERE session_id IN (SELECT session_id FROM sessions WHERE participant_id=?)`, args: [id] },
+        { sql: `DELETE FROM sessions WHERE participant_id=?`, args: [id] },
+        { sql: `UPDATE allocation SET consumed_by=? WHERE consumed_by=?`, args: ["deleted:" + id + ":" + Date.now(), id] },
+        { sql: `DELETE FROM participants WHERE participant_id=?`, args: [id] },
+      ], "write");
+      deleted.push(id);
+      await logEvent({ participant_id: id, session_id: s?.session_id || null, type: "participant_deleted", details: { reason: String(body.reason || "").slice(0, 300), had_session: !!s, ...summary }, admin });
     }
     return json({ deleted, kept });
   }
