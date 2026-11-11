@@ -26,7 +26,7 @@ function Detail({ id }) {
     if (status === 200) { setD(data); setErr(""); } else setErr(data.error || "Failed");
   }
 
-  if (!d) return <p className="muted">{err || "Loading…"}</p>;
+  if (!d) return <p className="muted">{err || "Loading..."}</p>;
   const s = d.session;
   const now = base.server + (performance.now() - base.perf);
   const rem = s.status === "active" ? Date.parse(s.expires_at) - now : null;
@@ -47,12 +47,12 @@ function Detail({ id }) {
             <div>Status</div><div><span className={`pill ${s.status}`}>{s.status}</span>{Number(s.error_flag) ? <span className="pill err" style={{ marginLeft: 6 }}>error</span> : null}</div>
             <div>Started</div><div>{fmtTime(s.started_at)}</div>
             <div>Deadline</div><div>{fmtTime(s.expires_at)}</div>
-            <div>Remaining</div><div className="mono">{rem !== null ? fmtLeft(rem) : "–"}</div>
+            <div>Remaining</div><div className="mono">{rem !== null ? fmtLeft(rem) : "-"}</div>
             <div>Ended</div><div>{fmtTime(s.ended_at)} {s.end_reason ? `(${s.end_reason})` : ""}</div>
             <div>Duration</div><div>{s.duration_seconds} s</div>
             <div>Model</div><div className="mono">{s.provider} / {s.model_id}</div>
             <div>Prompt version</div><div>{s.prompt_version} (config #{s.config_id})</div>
-            <div>Final link opened</div><div>{Number(s.final_assessment_link_opened) ? fmtTime(s.final_assessment_link_opened_at) : "no"} · completion: unknown</div>
+            <div>Final link opened</div><div>{Number(s.final_assessment_link_opened) ? fmtTime(s.final_assessment_link_opened_at) : "no"}. Completion: unknown</div>
             <div>Access verified</div><div>{fmtTime(d.participant?.preliminary_stage_verified_at)} {d.participant?.verification_method ? `(${d.participant.verification_method}${d.participant.verified_by ? " by " + d.participant.verified_by : ""})` : ""}</div>
           </div>
           <p style={{ margin: "18px 0" }}><a className="linkish" href={`/api/admin/export/transcript?session_id=${s.session_id}`}>Download transcript (.txt)</a></p>
@@ -89,7 +89,7 @@ function Detail({ id }) {
       </div>
 
       <div className="panel">
-        <h3>Transcript ({d.messages.length} messages) · read-only</h3>
+        <h3>Transcript ({d.messages.length} messages, read-only)</h3>
         <div className="table-wrap" style={{ maxHeight: "none" }}><table>
           <thead><tr><th>#</th><th>Speaker</th><th>Time</th><th>Status</th><th>Text</th></tr></thead>
           <tbody>

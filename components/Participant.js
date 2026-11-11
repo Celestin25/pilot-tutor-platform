@@ -161,7 +161,7 @@ export default function Participant({ code }) {
   }
 
   // ---------- screens ----------
-  if (!st) return <Shell><p className="muted">Loading…</p>{note && <p className="error">{note}</p>}</Shell>;
+  if (!st) return <Shell><p className="muted">Loading...</p>{note && <p className="error">{note}</p>}</Shell>;
 
   if (st.phase === "invalid")
     return <Shell><p className="eyebrow">Access</p><h1>Code not recognised</h1><hr className="rule" /><p className="error">{st.error}</p><a className="linkish" href="/">Enter a different code</a></Shell>;
@@ -172,10 +172,10 @@ export default function Participant({ code }) {
   if (st.phase === "waiting")
     return (
       <Shell>
-        <p className="eyebrow"><span className="pulse" />Waiting for the researcher</p>
+        <p className="eyebrow">Waiting for the researcher</p>
         <h1>Almost ready</h1>
         <hr className="rule" />
-        <p className="notice">Your code is valid. Please wait — a researcher will confirm that you can start. This page updates automatically.</p>
+        <p className="notice">Your code is valid. Please wait. A researcher will confirm that you can start. This page updates automatically.</p>
         <p className="muted small">Participant ID: {st.participant_id}</p>
       </Shell>
     );
@@ -219,7 +219,7 @@ export default function Participant({ code }) {
             {m.text}
           </div>
         ))}
-        {pending && <div className="typing"><span /><span /><span /> Tutor is writing…</div>}
+        {pending && <div className="typing"><span /><span /><span /> Tutor is writing...</div>}
         {failed && active && <div><button className="danger small" onClick={() => send(failed)}>Retry</button></div>}
         <div ref={endRef} />
       </div>
@@ -230,7 +230,7 @@ export default function Participant({ code }) {
             <textarea
               rows={2}
               value={input}
-              placeholder="Type your message…"
+              placeholder="Type your message..."
               maxLength={4000}
               disabled={!!pending}
               onChange={(e) => setInput(e.target.value)}

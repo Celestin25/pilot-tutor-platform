@@ -18,7 +18,7 @@ export default function Home() {
       <TopNav title="Learning session" right={<div className="navblock">Pilot<br />study</div>} />
       <main className="hero">
         <section className="hero-left">
-          <p className="eyebrow">Research study · AI tutor</p>
+          <p className="eyebrow">Research study, AI tutor</p>
           <h1>Welcome to your<br />learning session</h1>
           <hr className="rule" />
           <p>You will have a short, timed conversation with an AI tutor. Enter the access code a researcher gave you to begin.</p>

@@ -108,7 +108,7 @@ function Dashboard() {
             <option value="">All statuses</option><option value="pending">Pending approval</option><option value="approved (not opened)">Approved, not opened</option>
             <option value="ready">Ready (opened)</option><option value="active">Active</option><option value="ended">Ended</option><option value="blocked">Blocked</option>
           </select>
-          <span className="muted small">Auto-refreshes every 5 s · {filtered.length} rows</span>
+          <span className="muted small">Auto-refreshes every 5 s. {filtered.length} rows.</span>
         </div>
         <div className="row" style={{ marginBottom: 10 }}>
           <button className="small" disabled={!selectedIds.length} onClick={() => act("ready", selectedIds)}>Mark selected ready</button>
@@ -153,14 +153,14 @@ function Dashboard() {
                     <td><input type="checkbox" style={{ width: "auto" }} checked={!!sel[r.participant_id]} onChange={(e) => setSel({ ...sel, [r.participant_id]: e.target.checked })} /></td>
                     <td><b>{r.participant_id}</b>{Number(r.is_test) ? <span className="pill" style={{ marginLeft: 6 }}>test</span> : null}</td>
                     <td className="mono">{r.access_code} <a className="small" href="#" onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(linkOf(r.access_code)); setMsg(`Link for ${r.participant_id} copied.`); }}>copy link</a></td>
-                    <td>{r.condition || "–"}</td>
+                    <td>{r.condition || "-"}</td>
                     <td><span className={`pill ${pill}`}>{s}</span></td>
                     <td>{fmtTime(r.started_at)}</td>
                     <td>{fmtTime(r.expires_at)}</td>
-                    <td className="mono">{rem !== null ? fmtLeft(rem) : "–"}</td>
-                    <td>{r.session_id ? `${r.user_msgs} / ${r.msg_count}` : "–"}</td>
-                    <td>{r.end_reason || "–"}</td>
-                    <td>{Number(r.final_assessment_link_opened) ? "opened" : "–"}</td>
+                    <td className="mono">{rem !== null ? fmtLeft(rem) : "-"}</td>
+                    <td>{r.session_id ? `${r.user_msgs} / ${r.msg_count}` : "-"}</td>
+                    <td>{r.end_reason || "-"}</td>
+                    <td>{Number(r.final_assessment_link_opened) ? "opened" : "-"}</td>
                     <td>{Number(r.error_flag) ? <span className="pill err">error</span> : ""}</td>
                     <td>{r.session_id ? <a className="linkish" style={{ fontSize: 12.5 }} href={`/admin/session/${r.session_id}`}>Open</a> : ""}</td>
                   </tr>
@@ -181,12 +181,12 @@ function Dashboard() {
             <div style={{ width: 200 }}><label>Batch label (optional)</label><input value={gen.label} onChange={(e) => setGen({ ...gen, label: e.target.value })} /></div>
             <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 38 }}><input type="checkbox" style={{ width: "auto" }} checked={gen.is_test} onChange={(e) => setGen({ ...gen, is_test: e.target.checked })} /> Test sessions</label>
           </div>
-          <label>Or paste participant IDs agreed with the questionnaire team (one per line — overrides “How many”)</label>
+          <label>Or paste participant IDs agreed with the questionnaire team (one per line; this overrides "How many")</label>
           <textarea rows={3} value={gen.custom_ids} onChange={(e) => setGen({ ...gen, custom_ids: e.target.value })} placeholder={"e.g.\nS001\nS002"} />
           <div style={{ marginTop: 14 }}><button className="arrow" onClick={generate}>Generate invitations</button></div>
           {created && (
             <div style={{ marginTop: 14 }}>
-              <p className="notice small">Created {created.length}. Download the full list below (“Invitation list”).</p>
+              <p className="notice small">Created {created.length}. Download the full list below ("Invitation list").</p>
               <div style={{ maxHeight: 200, overflow: "auto" }}>
                 <table><tbody>{created.map((c) => <tr key={c.participant_id}><td>{c.participant_id}</td><td className="mono">{c.access_code}</td><td className="mono small">{linkOf(c.access_code)}</td></tr>)}</tbody></table>
               </div>
@@ -197,14 +197,14 @@ function Dashboard() {
           <h3>Exports (UTF-8, administrators only)</h3>
           <p className="small muted">Scope follows the first filter above: <b>{fTest === "participants" ? "participant data only" : fTest === "test" ? "test sessions only" : "all"}</b>.</p>
           <ul className="export-list">
-            <li><a className="linkish" href={`/api/admin/export/sessions?scope=${fTest}`}>Session summary · CSV</a></li>
-            <li><a className="linkish" href={`/api/admin/export/messages?scope=${fTest}`}>Messages · CSV</a></li>
-            <li><a className="linkish" href={`/api/admin/export/messages-json?scope=${fTest}`}>Messages · JSON</a></li>
-            <li><a className="linkish" href="/api/admin/export/events">Event log · CSV</a></li>
-            <li><a className="linkish navy" href="/api/admin/export/invitations">Invitation list (codes + links) · CSV</a></li>
-            <li><a className="linkish navy" href="/api/admin/export/backup">Full database backup · JSON</a></li>
+            <li><a className="linkish" href={`/api/admin/export/sessions?scope=${fTest}`}>Session summary (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages?scope=${fTest}`}>Messages (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages-json?scope=${fTest}`}>Messages (JSON)</a></li>
+            <li><a className="linkish" href="/api/admin/export/events">Event log (CSV)</a></li>
+            <li><a className="linkish navy" href="/api/admin/export/invitations">Invitation list (codes + links) (CSV)</a></li>
+            <li><a className="linkish navy" href="/api/admin/export/backup">Full database backup (JSON)</a></li>
           </ul>
-          <p className="small muted">Individual readable transcripts: open a session → “Download transcript”.</p>
+          <p className="small muted">Individual readable transcripts: open a session, then click "Download transcript".</p>
         </div>
       </div>
       <span style={{ display: "none" }}>{tick}</span>

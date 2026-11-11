@@ -15,12 +15,12 @@ export async function aapi(path, body, method) {
 }
 
 export function fmtTime(iso) {
-  if (!iso) return "–";
+  if (!iso) return "-";
   const d = new Date(iso);
   return d.toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 export function fmtLeft(ms) {
-  if (ms == null) return "–";
+  if (ms == null) return "-";
   const s = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -64,7 +64,7 @@ export default function AdminShell({ children }) {
     setOk(status === 200);
   }
   useEffect(() => { check(); }, []);
-  if (ok === null) return <div className="admin muted">Loading…</div>;
+  if (ok === null) return <div className="admin muted">Loading...</div>;
   if (!ok) return <Login onDone={check} />;
   async function logout() { await aapi("/api/admin/logout", {}); setOk(false); }
   const links = [{ href: "/admin", label: "Sessions" }, { href: "/admin/settings", label: "Study settings" }];

@@ -8,12 +8,12 @@ export default function Page() {
 
 const TEXT = [
   ["task_title", "Task title (shown to participants)", 1],
-  ["task_instructions", "Task instructions (shown to both groups — keep neutral)", 5],
+  ["task_instructions", "Task instructions (shown to both groups, keep neutral)", 5],
   ["common_prompt", "Common teaching prompt (same for both groups: topic, objectives, examples, tone, length, off-topic handling)", 16],
   ["control_instruction", "Control language instruction (English only)", 4],
-  ["treatment_instruction", "Treatment language instruction (agreed English–French rule)", 5],
-  ["opening_message_control", "Opening tutor message — control", 3],
-  ["opening_message_treatment", "Opening tutor message — treatment", 4],
+  ["treatment_instruction", "Treatment language instruction (agreed English-French rule)", 5],
+  ["opening_message_control", "Opening tutor message: control", 3],
+  ["opening_message_treatment", "Opening tutor message: treatment", 4],
 ];
 
 function Settings() {
@@ -25,7 +25,7 @@ function Settings() {
     setCfg(data.config); setMeta(data);
   }
   useEffect(() => { load(); }, []);
-  if (!cfg) return <p className="muted">Loading…</p>;
+  if (!cfg) return <p className="muted">Loading...</p>;
   const set = (k) => (e) => setCfg({ ...cfg, [k]: e.target.type === "checkbox" ? (e.target.checked ? 1 : 0) : e.target.value });
 
   async function save() {
@@ -41,7 +41,7 @@ function Settings() {
       <h1 className="title">Study settings</h1>
       <hr className="rule" />
       <p className="muted">Current version: <b>{cfg.prompt_version}</b> (saved {fmtTime(cfg.created_at)} by {cfg.created_by}). Each save creates a new frozen version; sessions copy their settings when created, so changes never affect sessions already allocated.</p>
-      {!meta.anthropic_key_set && cfg.provider === "anthropic" && !meta.mock && <p className="error">ANTHROPIC_API_KEY is not set on the server — the tutor cannot reply until it is added in Vercel → Settings → Environment Variables.</p>}
+      {!meta.anthropic_key_set && cfg.provider === "anthropic" && !meta.mock && <p className="error">ANTHROPIC_API_KEY is not set on the server. The tutor cannot reply until it is added in Vercel (Settings, Environment Variables).</p>}
       {meta.mock && <p className="warn">LLM_MOCK=1 is set: the tutor returns simulated replies (for testing only).</p>}
       <div className="grid2">
         <div className="panel">
@@ -52,7 +52,7 @@ function Settings() {
           <select value={String(cfg.duration_seconds)} onChange={set("duration_seconds")}>
             <option value="600">600 (10 minutes)</option><option value="900">900 (15 minutes)</option>
             {![600, 900].includes(Number(cfg.duration_seconds)) && <option value={String(cfg.duration_seconds)}>{cfg.duration_seconds} (custom)</option>}
-            <option value="120">120 (2 min — rehearsal only)</option>
+            <option value="120">120 (2 min, rehearsal only)</option>
           </select>
           <label>Allocation method</label><input value={cfg.allocation_method} disabled />
           <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" style={{ width: "auto" }} checked={!!Number(cfg.require_ready_mark)} onChange={set("require_ready_mark")} /> Require a researcher to mark each participant ready before they can start</label>
@@ -62,10 +62,10 @@ function Settings() {
           <label>Provider</label>
           <select value={cfg.provider} onChange={set("provider")}>
             <option value="anthropic">anthropic (Claude API)</option>
-            <option value="openai_compatible">openai_compatible (e.g. hosted Llama — set LLM_BASE_URL / LLM_API_KEY)</option>
+            <option value="openai_compatible">openai_compatible (e.g. hosted Llama; set LLM_BASE_URL / LLM_API_KEY)</option>
             <option value="mock">mock (testing only)</option>
           </select>
-          <label>Model ID (fixed for the whole pilot — no automatic fallback)</label><input value={cfg.model_id} onChange={set("model_id")} />
+          <label>Model ID (fixed for the whole pilot, no automatic fallback)</label><input value={cfg.model_id} onChange={set("model_id")} />
           <div className="row">
             <div style={{ width: 160 }}><label>Max reply tokens</label><input type="number" value={cfg.max_tokens} onChange={set("max_tokens")} /></div>
             <div style={{ width: 160 }}><label>Temperature (Llama only)</label><input type="number" step="0.1" value={cfg.temperature} onChange={set("temperature")} /></div>
