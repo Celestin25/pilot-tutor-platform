@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Start server (local SQLite, simulated tutor)
+        run: |
+          ADMIN_PASSWORD=testpw LLM_MOCK=1 LLM_MOCK_DELAY_MS=1500 npx next start -p 3100 > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:3100 && break; sleep 1; done
+      - name: Acceptance tests
+        run: python3 tests/acceptance.py http://localhost:3100
+      - name: Server log on failure
+        if: failure()
+        run: cat server.log
