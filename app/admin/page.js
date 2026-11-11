@@ -80,6 +80,9 @@ function Dashboard() {
 
   return (
     <>
+      <p className="eyebrow">Pilot study</p>
+      <h1 className="title">Sessions overview</h1>
+      <hr className="rule" />
       <div className="stats">
         <div className="stat"><b>{stats.invited}</b>invited</div>
         <div className="stat"><b>{stats.pending}</b>awaiting approval</div>
@@ -131,7 +134,7 @@ function Dashboard() {
           }}>Delete selected</button>
           {msg && <span className="small muted">{msg}</span>}
         </div>
-        <div style={{ overflowX: "auto", maxHeight: "60vh" }}>
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -159,7 +162,7 @@ function Dashboard() {
                     <td>{r.end_reason || "–"}</td>
                     <td>{Number(r.final_assessment_link_opened) ? "opened" : "–"}</td>
                     <td>{Number(r.error_flag) ? <span className="pill err">error</span> : ""}</td>
-                    <td>{r.session_id ? <a href={`/admin/session/${r.session_id}`}>Open</a> : ""}</td>
+                    <td>{r.session_id ? <a className="linkish" style={{ fontSize: 12.5 }} href={`/admin/session/${r.session_id}`}>Open</a> : ""}</td>
                   </tr>
                 );
               })}
@@ -176,11 +179,11 @@ function Dashboard() {
           <div className="row">
             <div style={{ width: 120 }}><label>How many</label><input type="number" min={1} max={500} value={gen.count} onChange={(e) => setGen({ ...gen, count: e.target.value })} /></div>
             <div style={{ width: 200 }}><label>Batch label (optional)</label><input value={gen.label} onChange={(e) => setGen({ ...gen, label: e.target.value })} /></div>
-            <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 34 }}><input type="checkbox" style={{ width: "auto" }} checked={gen.is_test} onChange={(e) => setGen({ ...gen, is_test: e.target.checked })} /> Test sessions</label>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 38 }}><input type="checkbox" style={{ width: "auto" }} checked={gen.is_test} onChange={(e) => setGen({ ...gen, is_test: e.target.checked })} /> Test sessions</label>
           </div>
           <label>Or paste participant IDs agreed with the questionnaire team (one per line — overrides “How many”)</label>
           <textarea rows={3} value={gen.custom_ids} onChange={(e) => setGen({ ...gen, custom_ids: e.target.value })} placeholder={"e.g.\nS001\nS002"} />
-          <div style={{ marginTop: 12 }}><button onClick={generate}>Generate</button></div>
+          <div style={{ marginTop: 14 }}><button className="arrow" onClick={generate}>Generate invitations</button></div>
           {created && (
             <div style={{ marginTop: 14 }}>
               <p className="notice small">Created {created.length}. Download the full list below (“Invitation list”).</p>
@@ -193,12 +196,13 @@ function Dashboard() {
         <div className="panel">
           <h3>Exports (UTF-8, administrators only)</h3>
           <p className="small muted">Scope follows the first filter above: <b>{fTest === "participants" ? "participant data only" : fTest === "test" ? "test sessions only" : "all"}</b>.</p>
-          <ul>
-            <li><a href={`/api/admin/export/sessions?scope=${fTest}`}>Session summary (CSV)</a></li>
-            <li><a href={`/api/admin/export/messages?scope=${fTest}`}>Messages (CSV)</a> · <a href={`/api/admin/export/messages-json?scope=${fTest}`}>Messages (JSON)</a></li>
-            <li><a href="/api/admin/export/events">Event log (CSV)</a></li>
-            <li><a href="/api/admin/export/invitations">Invitation list with codes and links (CSV)</a></li>
-            <li><a href="/api/admin/export/backup">Full database backup (JSON, no access codes)</a></li>
+          <ul className="export-list">
+            <li><a className="linkish" href={`/api/admin/export/sessions?scope=${fTest}`}>Session summary · CSV</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages?scope=${fTest}`}>Messages · CSV</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages-json?scope=${fTest}`}>Messages · JSON</a></li>
+            <li><a className="linkish" href="/api/admin/export/events">Event log · CSV</a></li>
+            <li><a className="linkish navy" href="/api/admin/export/invitations">Invitation list (codes + links) · CSV</a></li>
+            <li><a className="linkish navy" href="/api/admin/export/backup">Full database backup · JSON</a></li>
           </ul>
           <p className="small muted">Individual readable transcripts: open a session → “Download transcript”.</p>
         </div>

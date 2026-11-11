@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import TopNav from "@/components/TopNav";
 
 export async function aapi(path, body, method) {
   const r = await fetch(path, {
@@ -34,21 +35,25 @@ function Login({ onDone }) {
     if (status === 200) onDone(); else setErr(data.error || "Login failed");
   }
   return (
-    <main className="split">
-      <div className="center">
-        <form className="card" onSubmit={submit}>
-          <div className="brand"><span className="dot" /> Researcher access</div>
-          <h1>Administrator login</h1>
-          <label>Your name (recorded with admin actions)</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          <label>Password</label>
-          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
-          {err && <p className="error small">{err}</p>}
-          <div style={{ marginTop: 18 }}><button type="submit">Log in</button></div>
-        </form>
-      </div>
-      <div className="side-red" />
-    </main>
+    <div className="page">
+      <TopNav title="Researcher dashboard" right={<div className="navblock">Pilot<br />study</div>} />
+      <main className="split">
+        <div className="center">
+          <form className="card" onSubmit={submit}>
+            <p className="eyebrow">Researcher access</p>
+            <h1>Administrator login</h1>
+            <hr className="rule" />
+            <label>Your name (recorded with admin actions)</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <label>Password</label>
+            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
+            {err && <p className="error small">{err}</p>}
+            <div style={{ marginTop: 22 }}><button type="submit" className="arrow">Log in</button></div>
+          </form>
+        </div>
+        <div className="side-red" />
+      </main>
+    </div>
   );
 }
 
@@ -62,18 +67,14 @@ export default function AdminShell({ children }) {
   if (ok === null) return <div className="admin muted">Loading…</div>;
   if (!ok) return <Login onDone={check} />;
   async function logout() { await aapi("/api/admin/logout", {}); setOk(false); }
+  const links = [{ href: "/admin", label: "Sessions" }, { href: "/admin/settings", label: "Study settings" }];
   return (
     <>
-      <div className="redband" style={{ padding: "14px 22px" }}>
-        <div className="admin-nav" style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div className="serif" style={{ color: "#fff", fontWeight: 700, fontSize: 20 }}>Pilot study · Researcher dashboard</div>
-          <div className="links">
-            <a href="/admin" style={{ color: "#fff" }}>Sessions</a>
-            <a href="/admin/settings" style={{ color: "#fff" }}>Study settings</a>
-            <button className="secondary small" style={{ background: "transparent", color: "#fff", borderColor: "#fff" }} onClick={logout}>Log out</button>
-          </div>
-        </div>
-      </div>
+      <TopNav
+        title="Researcher dashboard"
+        links={links}
+        right={<button className="navblock" onClick={logout}>Log out</button>}
+      />
       <div className="admin">{children}</div>
     </>
   );

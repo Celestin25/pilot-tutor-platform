@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import TopNav from "@/components/TopNav";
 
 const END_TEXT = {
   time_limit: "The time for this task is over.",
@@ -163,15 +164,17 @@ export default function Participant({ code }) {
   if (!st) return <Shell><p className="muted">Loading…</p>{note && <p className="error">{note}</p>}</Shell>;
 
   if (st.phase === "invalid")
-    return <Shell><h1>Code not recognised</h1><p className="error">{st.error}</p><a href="/">← Enter a different code</a></Shell>;
+    return <Shell><p className="eyebrow">Access</p><h1>Code not recognised</h1><hr className="rule" /><p className="error">{st.error}</p><a className="linkish" href="/">Enter a different code</a></Shell>;
 
   if (st.phase === "blocked")
-    return <Shell><h1>Access not available</h1><p>Your access to this session is not active. Please speak to a researcher.</p></Shell>;
+    return <Shell><p className="eyebrow">Access</p><h1>Access not available</h1><hr className="rule" /><p>Your access to this session is not active. Please speak to a researcher.</p></Shell>;
 
   if (st.phase === "waiting")
     return (
       <Shell>
+        <p className="eyebrow"><span className="pulse" />Waiting for the researcher</p>
         <h1>Almost ready</h1>
+        <hr className="rule" />
         <p className="notice">Your code is valid. Please wait — a researcher will confirm that you can start. This page updates automatically.</p>
         <p className="muted small">Participant ID: {st.participant_id}</p>
       </Shell>
@@ -180,10 +183,12 @@ export default function Participant({ code }) {
   if (st.phase === "ready")
     return (
       <Shell wide>
+        <p className="eyebrow">Your task</p>
         <h1>{st.task_title}</h1>
+        <hr className="rule" />
         <p style={{ whiteSpace: "pre-wrap" }}>{st.task_instructions}</p>
         <p className="notice">You will have <b>{Math.round(st.duration_seconds / 60)} minutes</b>. The timer starts when you press <b>Start task</b> and keeps running even if you close the page.</p>
-        <div style={{ marginTop: 18 }}><button onClick={start} disabled={busy}>Start task</button></div>
+        <div style={{ marginTop: 22 }}><button className="arrow" onClick={start} disabled={busy}>Start task</button></div>
       </Shell>
     );
 
@@ -191,13 +196,17 @@ export default function Participant({ code }) {
   const ended = st.phase === "ended";
 
   return (
-    <div className="chat-wrap">
-      <div className="chat-head redband">
+    <div className="chat-page">
+      <TopNav
+        title="Learning session"
+        right={st.phase === "active"
+          ? <div className={"timer-block" + (left < 60000 ? " low" : "")} aria-live="polite"><small>Time left</small><b>{fmt(left ?? 0)}</b></div>
+          : <div className="navblock">Task<br />ended</div>}
+      />
+      <div className="chat-wrap">
+      <div className="chat-sub">
         <h2>{st.task_title}</h2>
-        <div className="row">
-          {st.phase === "active" && <div className={"timer" + (left < 60000 ? " low" : "")} aria-live="polite">{fmt(left ?? 0)}</div>}
-          {active && <button className="secondary small" onClick={() => setConfirmFinish(true)} disabled={busy}>Finish task</button>}
-        </div>
+        {active && <button className="linkish" onClick={() => setConfirmFinish(true)} disabled={busy}>Finish task</button>}
       </div>
       <details className="instr">
         <summary>Task instructions</summary>
@@ -211,7 +220,7 @@ export default function Participant({ code }) {
           </div>
         ))}
         {pending && <div className="typing"><span /><span /><span /> Tutor is writing…</div>}
-        {failed && active && <div><button className="secondary small" onClick={() => send(failed)}>Retry</button></div>}
+        {failed && active && <div><button className="danger small" onClick={() => send(failed)}>Retry</button></div>}
         <div ref={endRef} />
       </div>
       {note && <div style={{ padding: "0 18px 8px" }}><div className="warn small">{note}</div></div>}
@@ -227,21 +236,21 @@ export default function Participant({ code }) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             />
-            <button onClick={() => send()} disabled={!!pending || !input.trim() || !!failed}>Send</button>
+            <button className="arrow" onClick={() => send()} disabled={!!pending || !input.trim() || !!failed}>Send</button>
           </div>
           <div className="foot muted small"><span>Press Enter to send, Shift+Enter for a new line.</span></div>
         </>
       )}
       {(ended || timeUp) && (
         <div className="ended-bar">
-          <div><b>{ended ? END_TEXT[st.end_reason] || "The task has ended." : "Time is up."}</b><div className="small muted">Your conversation has been saved.</div></div>
-          {ended && <button onClick={openFinal} disabled={busy}>Continue to final assessment →</button>}
+          <div><b style={{ fontFamily: "var(--serif)", fontSize: 19 }}>{ended ? END_TEXT[st.end_reason] || "The task has ended." : "Time is up."}</b><div className="small muted">Your conversation has been saved.</div></div>
+          {ended && <button className="arrow" onClick={openFinal} disabled={busy}>Continue to final assessment</button>}
         </div>
       )}
       {confirmFinish && (
         <div className="modal-bg" role="dialog">
           <div className="card">
-            <h2 style={{ marginTop: 0 }}>Finish the task?</h2>
+            <p className="eyebrow">Confirm</p><h2 style={{ marginTop: 0 }}>Finish the task?</h2>
             <p>You will not be able to send more messages. You will then continue to the final assessment.</p>
             <div className="row" style={{ justifyContent: "flex-end" }}>
               <button className="secondary" onClick={() => setConfirmFinish(false)}>Keep chatting</button>
@@ -250,20 +259,21 @@ export default function Participant({ code }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
 
 function Shell({ children, wide }) {
   return (
-    <main className="split">
-      <div className="center">
-        <div className="card" style={wide ? { maxWidth: 680 } : undefined}>
-          <div className="brand"><span className="dot" /> Learning session</div>
-          {children}
+    <div className="page">
+      <TopNav title="Learning session" right={<div className="navblock">Pilot<br />study</div>} />
+      <main className="split">
+        <div className="center">
+          <div className="card" style={wide ? { maxWidth: 700 } : undefined}>{children}</div>
         </div>
-      </div>
-      <div className="side-red" />
-    </main>
+        <div className="side-red" />
+      </main>
+    </div>
   );
 }

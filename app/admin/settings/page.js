@@ -37,7 +37,9 @@ function Settings() {
 
   return (
     <>
-      <h1 style={{ margin: "0 0 6px" }}>Study settings</h1>
+      <p className="eyebrow">Configuration</p>
+      <h1 className="title">Study settings</h1>
+      <hr className="rule" />
       <p className="muted">Current version: <b>{cfg.prompt_version}</b> (saved {fmtTime(cfg.created_at)} by {cfg.created_by}). Each save creates a new frozen version; sessions copy their settings when created, so changes never affect sessions already allocated.</p>
       {!meta.anthropic_key_set && cfg.provider === "anthropic" && !meta.mock && <p className="error">ANTHROPIC_API_KEY is not set on the server — the tutor cannot reply until it is added in Vercel → Settings → Environment Variables.</p>}
       {meta.mock && <p className="warn">LLM_MOCK=1 is set: the tutor returns simulated replies (for testing only).</p>}
@@ -79,8 +81,8 @@ function Settings() {
           <div key={k}><label>{l}</label><textarea rows={rows} value={cfg[k]} onChange={set(k)} /></div>
         ))}
       </div>
-      <div className="row" style={{ position: "sticky", bottom: 0, background: "#fff", padding: "12px 0", borderTop: "1px solid var(--line)" }}>
-        <button onClick={save}>Save new version</button>{msg && <span>{msg}</span>}
+      <div className="row savebar">
+        <button className="arrow" onClick={save}>Save new version</button>{msg && <span>{msg}</span>}
       </div>
       <div className="panel" style={{ marginTop: 18 }}>
         <h3>Version history</h3>

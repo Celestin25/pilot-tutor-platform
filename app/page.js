@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import TopNav from "@/components/TopNav";
 
 export default function Home() {
   const [code, setCode] = useState("");
@@ -13,21 +14,28 @@ export default function Home() {
     router.push(`/p/${c}`);
   }
   return (
-    <main className="hero">
-      <section className="hero-left">
-        <h1>Welcome to your<br />learning session</h1>
-        <p>You will have a short, timed conversation with an AI tutor. Enter the access code a researcher gave you to begin.</p>
-        <form className="hero-form" onSubmit={go}>
-          <label htmlFor="code">Access code</label>
-          <input id="code" autoComplete="off" autoFocus placeholder="XXXXX-XXXXX" value={code} onChange={(e) => { setCode(e.target.value); setErr(""); }} />
-          {err && <p className="error small" style={{ marginTop: 10 }}>{err}</p>}
-          <div style={{ marginTop: 18 }}><button type="submit" className="linkish">Continue</button></div>
-        </form>
-      </section>
-      <section className="hero-right">
-        <div className="side"><strong>Learn by talking</strong>Ask questions, explain ideas in your own words, and work through the topic with your tutor.</div>
-        <div className="badge"><b>1:1</b><span>a private session just for you</span></div>
-      </section>
-    </main>
+    <div className="page">
+      <TopNav title="Learning session" right={<div className="navblock">Pilot<br />study</div>} />
+      <main className="hero">
+        <section className="hero-left">
+          <p className="eyebrow">Research study · AI tutor</p>
+          <h1>Welcome to your<br />learning session</h1>
+          <hr className="rule" />
+          <p>You will have a short, timed conversation with an AI tutor. Enter the access code a researcher gave you to begin.</p>
+          <form className="hero-form" onSubmit={go}>
+            <label htmlFor="code">Access code</label>
+            <div className="code-row">
+              <input id="code" autoComplete="off" autoFocus placeholder="XXXXX-XXXXX" value={code} onChange={(e) => { setCode(e.target.value); setErr(""); }} />
+              <button type="submit" className="arrow">Continue</button>
+            </div>
+            {err && <p className="error small" style={{ marginTop: 10 }}>{err}</p>}
+          </form>
+        </section>
+        <section className="hero-right">
+          <div className="side"><strong>Learn by talking</strong>Ask questions, explain ideas in your own words, and work through the topic with your tutor.</div>
+          <div className="badge"><b>1:1</b><span>a private session just for you</span></div>
+        </section>
+      </main>
+    </div>
   );
 }

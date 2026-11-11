@@ -33,8 +33,10 @@ function Detail({ id }) {
 
   return (
     <>
-      <p><a href="/admin">← All sessions</a></p>
-      <h1 style={{ margin: "0 0 12px" }}>Participant {s.participant_id} {Number(s.test_session) ? <span className="pill">test</span> : null}</h1>
+      <p style={{ margin: "0 0 14px" }}><a className="linkish" href="/admin">All sessions</a></p>
+      <p className="eyebrow">Session detail</p>
+      <h1 className="title">Participant {s.participant_id} {Number(s.test_session) ? <span className="pill">test</span> : null}</h1>
+      <hr className="rule" />
       {err && <p className="error">{err}</p>}
       <div className="grid2">
         <div className="panel">
@@ -53,7 +55,7 @@ function Detail({ id }) {
             <div>Final link opened</div><div>{Number(s.final_assessment_link_opened) ? fmtTime(s.final_assessment_link_opened_at) : "no"} · completion: unknown</div>
             <div>Access verified</div><div>{fmtTime(d.participant?.preliminary_stage_verified_at)} {d.participant?.verification_method ? `(${d.participant.verification_method}${d.participant.verified_by ? " by " + d.participant.verified_by : ""})` : ""}</div>
           </div>
-          <p><a href={`/api/admin/export/transcript?session_id=${s.session_id}`}>Download transcript (.txt)</a></p>
+          <p style={{ margin: "18px 0" }}><a className="linkish" href={`/api/admin/export/transcript?session_id=${s.session_id}`}>Download transcript (.txt)</a></p>
           <details><summary className="small">System prompt used for this session</summary><pre className="prompt">{s.system_prompt}</pre></details>
         </div>
         <div className="panel">
@@ -88,7 +90,7 @@ function Detail({ id }) {
 
       <div className="panel">
         <h3>Transcript ({d.messages.length} messages) · read-only</h3>
-        <table>
+        <div className="table-wrap" style={{ maxHeight: "none" }}><table>
           <thead><tr><th>#</th><th>Speaker</th><th>Time</th><th>Status</th><th>Text</th></tr></thead>
           <tbody>
             {d.messages.map((m) => (
@@ -101,7 +103,7 @@ function Detail({ id }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       <div className="panel">
