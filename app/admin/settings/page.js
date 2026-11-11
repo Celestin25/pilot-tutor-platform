@@ -66,7 +66,7 @@ function Settings() {
           <label>Model ID (fixed for the whole pilot — no automatic fallback)</label><input value={cfg.model_id} onChange={set("model_id")} />
           <div className="row">
             <div style={{ width: 160 }}><label>Max reply tokens</label><input type="number" value={cfg.max_tokens} onChange={set("max_tokens")} /></div>
-            <div style={{ width: 160 }}><label>Temperature</label><input type="number" step="0.1" value={cfg.temperature} onChange={set("temperature")} /></div>
+            <div style={{ width: 160 }}><label>Temperature (Llama only)</label><input type="number" step="0.1" value={cfg.temperature} onChange={set("temperature")} /></div>
           </div>
           <label>Final assessment URL</label><input value={cfg.final_assessment_url} onChange={set("final_assessment_url")} />
           <label>Participant ID parameter name (agreed with questionnaire team)</label><input value={cfg.id_param_name} onChange={set("id_param_name")} />
