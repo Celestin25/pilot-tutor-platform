@@ -62,7 +62,9 @@ function Dashboard() {
 
   async function act(action, ids, extra = {}) {
     const { status, data } = await aapi("/api/admin/participants", { action, ids, ...extra });
-    setMsg(status === 200 ? `Done${data.updated !== undefined ? `: ${data.updated} updated` : ""}.` : data.error || "Failed");
+    setMsg(status !== 200 ? data.error || "Failed"
+      : data.deleted ? `Deleted ${data.deleted.length}.${data.kept.length ? ` Not deleted (already started — use Block / withdraw): ${data.kept.join(", ")}` : ""}`
+      : `Done${data.updated !== undefined ? `: ${data.updated} updated` : ""}.`);
     setSel({});
     load();
   }
@@ -116,6 +118,9 @@ function Dashboard() {
             if (reason) act("block", selectedIds, { reason });
           }}>Block / withdraw selected</button>
           <button className="small secondary" disabled={!selectedIds.length} onClick={() => act("unblock", selectedIds)}>Unblock selected</button>
+          <button className="small danger" disabled={!selectedIds.length} onClick={() => {
+            if (confirm(`Delete ${selectedIds.length} participant(s)? Only those who have NOT opened their link are deleted; their code stops working. This cannot be undone.`)) act("delete", selectedIds, { reason: "deleted by researcher" });
+          }}>Delete selected (not started)</button>
           {msg && <span className="small muted">{msg}</span>}
         </div>
         <div style={{ overflowX: "auto", maxHeight: "60vh" }}>

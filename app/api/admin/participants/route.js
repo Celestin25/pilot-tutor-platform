@@ -79,5 +79,19 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
     return json({ ok: true });
   }
 
+  if (body.action === "delete") {
+    // Only invitations that were never used: no session, no allocation consumed, no chat data.
+    const deleted = [], kept = [];
+    for (const id of ids) {
+      const r = await q(
+        `DELETE FROM participants WHERE participant_id=? AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.participant_id=?)`,
+        [id, id]
+      );
+      if (r.rowsAffected) { deleted.push(id); await logEvent({ participant_id: id, type: "participant_deleted", details: { reason: String(body.reason || "").slice(0, 300) }, admin }); }
+      else kept.push(id);
+    }
+    return json({ deleted, kept });
+  }
+
   return json({ error: "Unknown action" }, 400);
 });
