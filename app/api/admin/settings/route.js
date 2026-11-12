@@ -1,11 +1,16 @@
 import { adminRoute } from "@/lib/auth";
 import { activeConfig, saveConfig, CONFIG_FIELDS } from "@/lib/config";
-import { all } from "@/lib/db";
+import { all, one } from "@/lib/db";
 import { json, logEvent } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
-export const GET = adminRoute(async () => {
+export const GET = adminRoute(async (req) => {
+  const id = new URL(req.url).searchParams.get("id");
+  if (id) {
+    const old = await one(`SELECT * FROM study_config WHERE config_id=?`, [Number(id)]);
+    return old ? json({ config: old }) : json({ error: "Not found" }, 404);
+  }
   const cfg = await activeConfig();
   const history = await all(`SELECT config_id, prompt_version, created_at, created_by FROM study_config ORDER BY config_id DESC LIMIT 30`);
   return json({ config: cfg, history, anthropic_key_set: !!process.env.ANTHROPIC_API_KEY, mock: process.env.LLM_MOCK === "1" });

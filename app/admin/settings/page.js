@@ -28,6 +28,14 @@ function Settings() {
   if (!cfg) return <p className="muted">Loading...</p>;
   const set = (k) => (e) => setCfg({ ...cfg, [k]: e.target.type === "checkbox" ? (e.target.checked ? 1 : 0) : e.target.value });
 
+  async function restore(h) {
+    const { status, data } = await aapi(`/api/admin/settings?id=${h.config_id}`);
+    if (status !== 200) return setMsg(data.error || "Could not load that version.");
+    setCfg(data.config);
+    setMsg(`Loaded ${h.prompt_version} into the form. Click "Save new version" to make it the active version.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function save() {
     if (!confirm("Save as a new configuration version? Existing sessions keep the settings they started with; only NEW sessions use this version.")) return;
     const { status, data } = await aapi("/api/admin/settings", { ...cfg, allow_custom_duration: ![600, 900].includes(Number(cfg.duration_seconds)) && confirm("Duration is not 600 or 900 seconds. Allow it (e.g. for a rehearsal)?") });
@@ -40,7 +48,8 @@ function Settings() {
       <p className="eyebrow">Configuration</p>
       <h1 className="title">Study settings</h1>
       <hr className="rule" />
-      <p className="muted">Current version: <b>{cfg.prompt_version}</b> (saved {fmtTime(cfg.created_at)} by {cfg.created_by}). Each save creates a new frozen version; sessions copy their settings when created, so changes never affect sessions already allocated.</p>
+      {msg && <p className="notice">{msg}</p>}
+      <p className="muted">Current version: <b>{meta.config?.prompt_version}</b> (saved {fmtTime(meta.config?.created_at)} by {meta.config?.created_by}). Each save creates a new frozen version; sessions copy their settings when created, so changes never affect sessions already allocated.</p>
       {!meta.anthropic_key_set && cfg.provider === "anthropic" && !meta.mock && <p className="error">ANTHROPIC_API_KEY is not set on the server. The tutor cannot reply until it is added in Vercel (Settings, Environment Variables).</p>}
       {meta.mock && <p className="warn">LLM_MOCK=1 is set: the tutor returns simulated replies (for testing only).</p>}
       <div className="grid2">
@@ -86,8 +95,10 @@ function Settings() {
       </div>
       <div className="panel" style={{ marginTop: 18 }}>
         <h3>Version history</h3>
-        <table><thead><tr><th>Version</th><th>Saved</th><th>By</th></tr></thead>
-          <tbody>{(meta.history || []).map((h) => <tr key={h.config_id}><td>{h.prompt_version}</td><td>{fmtTime(h.created_at)}</td><td>{h.created_by}</td></tr>)}</tbody></table>
+        <p className="small muted">The newest version is always the active one. To go back to an older version, click Restore, check the form, then click Save new version.</p>
+        <table><thead><tr><th>Version</th><th>Saved</th><th>By</th><th></th></tr></thead>
+          <tbody>{(meta.history || []).map((h, i) => <tr key={h.config_id}><td>{h.prompt_version}{i === 0 ? <span className="pill active" style={{ marginLeft: 8 }}>active</span> : null}</td><td>{fmtTime(h.created_at)}</td><td>{h.created_by}</td>
+            <td>{i === 0 ? "" : <button className="secondary small" onClick={() => restore(h)}>Restore</button>}</td></tr>)}</tbody></table>
       </div>
     </>
   );
