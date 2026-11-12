@@ -55,6 +55,7 @@ function Dashboard() {
       treatmentEnded: c((r) => r.condition === "treatment" && r.status === "ended"),
       errors: c((r) => Number(r.error_flag)),
       linkOpened: c((r) => Number(r.final_assessment_link_opened)),
+      pretestOpened: c((r) => !!r.pretest_opened_at),
     };
   }, [rows, fTest]);
 
@@ -89,6 +90,7 @@ function Dashboard() {
         <div className="stat"><b>{stats.control} / {stats.treatment}</b>assigned control / treatment</div>
         <div className="stat"><b>{stats.active}</b>active now</div>
         <div className="stat"><b>{stats.controlEnded} / {stats.treatmentEnded}</b>ended control / treatment</div>
+        <div className="stat"><b>{stats.pretestOpened}</b>pre-test opened</div>
         <div className="stat"><b>{stats.linkOpened}</b>final link opened<div className="small muted">completion: unknown</div></div>
         <div className="stat"><b style={{ color: stats.errors ? "var(--red)" : undefined }}>{stats.errors}</b>sessions with errors</div>
       </div>
@@ -139,7 +141,7 @@ function Dashboard() {
             <thead>
               <tr>
                 <th><input type="checkbox" style={{ width: "auto" }} onChange={(e) => { const v = e.target.checked; const n = {}; filtered.forEach((r) => (n[r.participant_id] = v)); setSel(n); }} /></th>
-                <th>Participant</th><th>Access code</th><th>Group</th><th>Status</th><th>Start</th><th>Deadline</th><th>Remaining</th>
+                <th>Participant</th><th>Access code</th><th>Pre-test</th><th>Group</th><th>Status</th><th>Start</th><th>Deadline</th><th>Remaining</th>
                 <th>Msgs</th><th>End reason</th><th>Final link</th><th>Error</th><th></th>
               </tr>
             </thead>
@@ -153,6 +155,7 @@ function Dashboard() {
                     <td><input type="checkbox" style={{ width: "auto" }} checked={!!sel[r.participant_id]} onChange={(e) => setSel({ ...sel, [r.participant_id]: e.target.checked })} /></td>
                     <td><b>{r.participant_id}</b>{Number(r.is_test) ? <span className="pill" style={{ marginLeft: 6 }}>test</span> : null}</td>
                     <td className="mono">{r.access_code} <a className="small" href="#" onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(linkOf(r.access_code)); setMsg(`Link for ${r.participant_id} copied.`); }}>copy link</a></td>
+                    <td>{r.pretest_opened_at ? "opened" : "-"}</td>
                     <td>{r.condition || "-"}</td>
                     <td><span className={`pill ${pill}`}>{s}</span></td>
                     <td>{fmtTime(r.started_at)}</td>
@@ -166,7 +169,7 @@ function Dashboard() {
                   </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={13} className="muted">No rows. Generate invitations below.</td></tr>}
+              {!filtered.length && <tr><td colSpan={14} className="muted">No rows. Generate invitations below.</td></tr>}
             </tbody>
           </table>
         </div>

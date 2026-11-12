@@ -25,6 +25,7 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
     if (!body.allow_custom_duration) return json({ error: "Duration must be 600 or 900 seconds." }, 400);
   }
   try { new URL(input.final_assessment_url); } catch { return json({ error: "Final assessment URL must be a full URL (https://...)." }, 400); }
+  if (input.pretest_url) { try { new URL(input.pretest_url); } catch { return json({ error: "Pre-test URL must be a full URL (https://...) or empty." }, 400); } }
   const v = await saveConfig(input, admin);
   await logEvent({ type: "config_saved", details: { prompt_version: v }, admin });
   return json({ ok: true, prompt_version: v });

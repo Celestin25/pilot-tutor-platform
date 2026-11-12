@@ -9,7 +9,7 @@ async function load(id) {
   let s = await one(`SELECT * FROM sessions WHERE session_id=?`, [id]);
   if (!s) return null;
   s = await lazyExpire(s);
-  const p = await one(`SELECT participant_id, access_status, preliminary_stage_verified_at, verification_method, verified_by, is_test, batch_label FROM participants WHERE participant_id=?`, [s.participant_id]);
+  const p = await one(`SELECT participant_id, access_status, preliminary_stage_verified_at, pretest_opened_at, verification_method, verified_by, is_test, batch_label FROM participants WHERE participant_id=?`, [s.participant_id]);
   const messages = await all(`SELECT * FROM messages WHERE session_id=? ORDER BY seq`, [id]);
   const events = await all(`SELECT * FROM events WHERE session_id=? OR (session_id IS NULL AND participant_id=?) ORDER BY ts`, [id, s.participant_id]);
   delete s.inflight_request_id;

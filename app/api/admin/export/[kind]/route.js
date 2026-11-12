@@ -26,7 +26,7 @@ export const GET = adminRoute(async (req, { params }) => {
       SELECT s.participant_id, s.session_id, s.condition, s.status, s.created_at, s.started_at, s.expires_at, s.ended_at, s.end_reason,
              s.duration_seconds, s.model_id, s.provider, s.prompt_version, s.config_id, s.allocation_seq, s.test_session, s.error_flag,
              s.final_assessment_link_opened, s.final_assessment_link_opened_at, 'unknown' AS final_assessment_completed,
-             p.access_status, p.preliminary_stage_verified_at, p.verification_method,
+             p.access_status, p.preliminary_stage_verified_at, p.verification_method, p.pretest_opened_at AS pretest_link_opened_at,
              (SELECT COUNT(*) FROM messages m WHERE m.session_id=s.session_id AND m.role='user') AS participant_messages,
              (SELECT COUNT(*) FROM messages m WHERE m.session_id=s.session_id AND m.role='assistant' AND m.delivery_status='delivered') AS tutor_messages,
              (SELECT COUNT(*) FROM events e WHERE e.session_id=s.session_id AND e.event_type='llm_error') AS llm_errors,

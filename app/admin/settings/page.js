@@ -79,8 +79,11 @@ function Settings() {
             <div style={{ width: 160 }}><label>Max reply tokens</label><input type="number" value={cfg.max_tokens} onChange={set("max_tokens")} /></div>
             <div style={{ width: 160 }}><label>Temperature (Llama only)</label><input type="number" step="0.1" value={cfg.temperature} onChange={set("temperature")} /></div>
           </div>
+          <label>Pre-test URL (optional, leave empty for no pre-test)</label><input value={cfg.pretest_url || ""} placeholder="https://..." onChange={set("pretest_url")} />
+          <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" style={{ width: "auto" }} checked={!!Number(cfg.pretest_required ?? 1)} onChange={set("pretest_required")} /> Participants must open the pre-test before Start task</label>
           <label>Final assessment URL</label><input value={cfg.final_assessment_url} onChange={set("final_assessment_url")} />
           <label>Participant ID parameter name (agreed with questionnaire team)</label><input value={cfg.id_param_name} onChange={set("id_param_name")} />
+          {cfg.pretest_url && <p className="small muted">Pre-test link: {cfg.pretest_url}{cfg.pretest_url.includes("?") ? "&" : "?"}{cfg.id_param_name}=P001</p>}
           <p className="small muted">Participants are sent to: {cfg.final_assessment_url}{cfg.final_assessment_url.includes("?") ? "&" : "?"}{cfg.id_param_name}=P001</p>
         </div>
       </div>

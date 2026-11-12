@@ -52,6 +52,7 @@ function Detail({ id }) {
             <div>Duration</div><div>{s.duration_seconds} s</div>
             <div>Model</div><div className="mono">{s.provider} / {s.model_id}</div>
             <div>Prompt version</div><div>{s.prompt_version} (config #{s.config_id})</div>
+            <div>Pre-test link opened</div><div>{d.participant?.pretest_opened_at ? fmtTime(d.participant.pretest_opened_at) : "no"}. Completion: unknown</div>
             <div>Final link opened</div><div>{Number(s.final_assessment_link_opened) ? fmtTime(s.final_assessment_link_opened_at) : "no"}. Completion: unknown</div>
             <div>Access verified</div><div>{fmtTime(d.participant?.preliminary_stage_verified_at)} {d.participant?.verification_method ? `(${d.participant.verification_method}${d.participant.verified_by ? " by " + d.participant.verified_by : ""})` : ""}</div>
           </div>

@@ -143,6 +143,35 @@ export default function Participant({ code }) {
     }
   }
 
+  async function openPretest() {
+    const w = window.open("", "_blank");
+    setBusy(true);
+    const { status, data } = await api("/api/p/pretest", { code });
+    setBusy(false);
+    if (status === 200 && data.url) {
+      if (w) w.location.href = data.url; else window.location.href = data.url;
+      refresh(false).catch(() => {});
+    } else {
+      if (w) w.close();
+      setNote(data.error || "Could not open the pre-test. Please tell a researcher.");
+    }
+  }
+
+  const pretestBlock = st?.pretest ? (
+    <div className={st.pretest.opened ? "notice" : "warn"} style={{ margin: "16px 0" }}>
+      <b>Step 1: Pre-test</b>
+      <p style={{ margin: "6px 0 10px" }}>
+        {st.pretest.opened
+          ? "You have opened the pre-test. If you have not finished it yet, complete it in the other tab, then come back here."
+          : "Before the learning task, please complete the short pre-test. It opens in a new tab. When you finish, come back to this page."}
+      </p>
+      <button className={st.pretest.opened ? "secondary small" : "small"} onClick={openPretest} disabled={busy}>
+        {st.pretest.opened ? "Open the pre-test again" : "Open the pre-test"}
+      </button>
+    </div>
+  ) : null;
+  const pretestBlocking = st?.pretest && st.pretest.required && !st.pretest.opened;
+
   async function finish() {
     setConfirmFinish(false);
     setBusy(true);
@@ -175,7 +204,8 @@ export default function Participant({ code }) {
         <p className="eyebrow">Waiting for the researcher</p>
         <h1>Almost ready</h1>
         <hr className="rule" />
-        <p className="notice">Your code is valid. Please wait. A researcher will confirm that you can start. This page updates automatically.</p>
+        {pretestBlock}
+        <p className="notice">{st.pretest ? "Step 2: " : ""}Your code is valid. Please wait. A researcher will confirm that you can start. This page updates automatically.</p>
         <p className="muted small">Participant ID: {st.participant_id}</p>
       </Shell>
     );
@@ -186,9 +216,13 @@ export default function Participant({ code }) {
         <p className="eyebrow">Your task</p>
         <h1>{st.task_title}</h1>
         <hr className="rule" />
+        {pretestBlock}
+        {st.pretest && <p className="eyebrow" style={{ marginTop: 18 }}>Step 2: Learning task</p>}
         <p style={{ whiteSpace: "pre-wrap" }}>{st.task_instructions}</p>
         <p className="notice">You will have <b>{Math.round(st.duration_seconds / 60)} minutes</b>. The timer starts when you press <b>Start task</b> and keeps running even if you close the page.</p>
-        <div style={{ marginTop: 22 }}><button className="arrow" onClick={start} disabled={busy}>Start task</button></div>
+        <div style={{ marginTop: 22 }}><button className="arrow" onClick={start} disabled={busy || pretestBlocking}>Start task</button>
+          {pretestBlocking && <p className="small muted" style={{ marginTop: 8 }}>Open the pre-test first to unlock Start task.</p>}
+          {note && <p className="error small" style={{ marginTop: 8 }}>{note}</p>}</div>
       </Shell>
     );
 
