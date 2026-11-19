@@ -1,8 +1,8 @@
 # Pilot Tutor Platform
 
-Web platform for the pilot study: participants open a link (or enter an access code), are randomly assigned server-side to **control** (English-only tutor) or **treatment** (English–French support), chat with an LLM tutor for a fixed time, and then continue to the external final assessment. Researchers monitor and export everything from `/admin`.
+All-in-one study platform: participants open a personal link, complete a short intro, then do the **same task block once in each language condition** (L1 English only, L2 French only, Mixed English and French) in a counterbalanced order, and finish with demographic questions. Each task block can contain a timed tutor chat (Claude, speaking that condition's language) and questions: **sliders** (single dot, starting in the middle), **multiple choice**, **text answers** and **information text**. Researchers build the study, monitor participants and export the data from `/admin`.
 
-Stack: Next.js (Vercel) · Turso / libSQL (SQLite) · Claude API (or any OpenAI-compatible provider, e.g. hosted Llama).
+Stack: Next.js (Vercel) - Turso / libSQL (SQLite) - Claude API (or any OpenAI-compatible provider).
 
 ## 1. Setup
 
@@ -18,39 +18,18 @@ Stack: Next.js (Vercel) · Turso / libSQL (SQLite) · Claude API (or any OpenAI-
 
 Local: `npm install && ADMIN_PASSWORD=x LLM_MOCK=1 npm run dev`. Tables are created automatically on first request.
 
-## 2. Configuration before launch (Admin → Study settings)
+## 2. Building the study (Admin, Study design)
 
-Replace the placeholders with the research team's approved text: task title and instructions, **common teaching prompt** (topic, objectives, examples, tone, length, off-topic handling), **control** and **treatment** language instructions, opening messages, duration (600 or 900 s), model ID, final assessment URL and the participant-ID parameter name agreed with the questionnaire teammate.
+- **Conditions**: ID, name, tutor language rule and opening message for each condition. Order: counterbalanced (all possible orders used equally, in shuffled blocks) or fixed.
+- **Sections**: 1. Start (shown once), 2. Task block (repeated once per condition), 3. End (demographics). Each section has pages; each page has questions.
+- **Question types**: information text, slider (min, max, start, step, end labels), multiple choice (single or several answers), text answer, tutor chat (length in minutes, task/topic for the tutor). Any question text can differ per condition.
+- The page shows the **estimated total time** (target: 20 minutes or less).
+- Saving creates a frozen version. Participants keep the version that was active when they first opened their link.
 
-Each save creates a frozen version (`v1`, `v2`, …). A session copies its prompts, model, duration and final URL when it is created, so later edits never change sessions already allocated. **Freeze the configuration before collecting pilot data.**
+## 3. Data
 
-Default treatment rule: complete English reply followed by a complete French translation (`FR:` line). The brief asks the team to confirm this vs. alternating sentences — edit the treatment instruction if needed.
+Exports: answers (one row per participant, columns like `understanding_L1`, `understanding_L2`, `understanding_MIX`), answers (one row per answer), participant summary, chats summary, chat messages (CSV/JSON), event log, invitation list, full backup. All UTF-8.
 
-## 3. Running a session (researchers)
+## 4. Tests
 
-1. `/admin` → log in with your name (recorded on every admin action) and the password.
-2. **Generate invitations** — a number (IDs `P001…`), or paste the IDs agreed with the questionnaire team. Tick *Test sessions* for rehearsals (IDs `T001…`, separate allocation sequence, excluded from participant exports).
-3. Download **Invitation list** (CSV with codes and personal links) and give each participant their own link or code.
-4. After checking the external preliminary stage, select participants → **Mark selected ready** (or *Mark all pending in view ready*). Unapproved participants see a waiting screen that updates automatically; the timer does not start.
-5. Monitor the table (refreshes every 5 s). Open a row for the full transcript, model/prompt version, event log, **Stop session** (with reason) and **deadline adjustment** (logged with old/new deadline, who and why).
-6. Exports: session summary CSV, messages CSV/JSON, event log, per-session transcript, full backup JSON.
-
-## 4. Participant journey
-
-Link `/p/<code>` or the home page + code → (waiting for approval) → task instructions + **Start task** → chat with countdown, Send, Finish task → ended screen → **Continue to final assessment** (opens `FINAL_URL?pid=<participant_id>`).
-
-## 5. How the brief's rules are enforced
-
-- **Allocation:** permuted blocks of 4 (2 control, 2 treatment, shuffled) kept on the server; the next slot is consumed and the session created in one database transaction when an approved participant first opens the link. Refresh / second tab / repeat link → same session. No reassignment for dropouts; the dashboard reports assigned and ended counts per group separately.
-- **Timer:** server stores `started_at` / `expires_at`; the browser only displays remaining time (monotonic clock, unaffected by changing the computer clock). After expiry chat requests are rejected; a reply that finishes after the deadline is saved as `discarded_after_expiry`, not shown, and logged.
-- **Statuses:** `ready → active → ended` (+ `blocked`); end reasons `time_limit`, `participant_finished`, `researcher_stopped`, `technical_failure`, `withdrawn`. Final-assessment *link opened* is tracked; completion is always reported as `unknown`.
-- **Reliability:** one outstanding LLM request per session; unique request IDs prevent duplicate turns on double-click or retry; the user message is saved before the provider call; failures are marked, flagged on the dashboard and offered a Retry; no automatic fallback model.
-- **Privacy:** codes are random (10 characters) and stored as SHA-256 hashes for lookup; the plaintext code is kept only for the invitation list and never appears in data exports or backups. Participants never see their group, prompts or keys.
-
-## 6. Backup
-
-Download *Full database backup (JSON)* from the dashboard after each lab session. Turso also keeps point-in-time restore for the database.
-
-## 7. Acceptance tests
-
-`/tmp`-style script results (local run with mock tutor, 12 simultaneous participants): invalid code rejected; unapproved participant cannot start; 36 parallel entries → exactly 12 sessions, 6 control / 6 treatment; participant state never reveals group; parallel Start → one deadline; reconnect keeps deadline; duplicate request ID → no duplicate turn; concurrent sends → one accepted, one "busy"; independent histories; reply in progress at expiry → discarded, session ended `time_limit`; ended session cannot restart; final link carries `pid=P001`; early finish → `participant_finished` with link available; dashboard shows link opened and end reason. Re-run on the deployed site with test sessions before the pilot.
+`tests/acceptance.py` (40 checks) runs in GitHub Actions on every push: approval, counterbalancing across 12 simultaneous arrivals, chat timer and expiry, duplicate-click protection, required-answer validation, per-condition text and tutor rules, demographics at the end, exports, stop and delete.

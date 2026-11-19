@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 export default function TopNav({ title = "Learning session", links = [], right = null, mobileExtra = null }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
-  const isActive = (href) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+  const isActive = (href) => (href === "/admin" ? path === "/admin" || path.startsWith("/admin/p/") : path.startsWith(href));
   return (
     <>
       <header className="topnav">

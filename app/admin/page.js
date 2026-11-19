@@ -11,8 +11,7 @@ function Dashboard() {
   const [serverNow, setServerNow] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(0);
   const [tick, setTick] = useState(0);
-  const [fGroup, setFGroup] = useState("");
-  const [fStatus, setFStatus] = useState("");
+    const [fStatus, setFStatus] = useState("");
   const [fTest, setFTest] = useState("participants");
   const [sel, setSel] = useState({});
   const [gen, setGen] = useState({ count: 10, is_test: false, label: "", custom_ids: "" });
@@ -28,18 +27,17 @@ function Dashboard() {
 
   const nowServer = serverNow ? serverNow + (performance.now() - fetchedAt) : Date.now();
 
-  const statusOf = (r) => (r.session_id ? r.status : r.access_status === "blocked" ? "blocked" : r.access_status === "ready" ? "approved (not opened)" : "pending approval");
+  const statusOf = (r) => (r.access_status === "blocked" ? "blocked" : r.status === "ready" ? "ready (not started)" : r.status === "ended" && r.end_reason === "completed" ? "completed" : r.status ? r.status : r.access_status === "ready" ? "approved (not opened)" : "pending approval");
 
   const filtered = useMemo(() => rows.filter((r) => {
     if (fTest === "participants" && Number(r.is_test)) return false;
     if (fTest === "test" && !Number(r.is_test)) return false;
-    if (fGroup && r.condition !== fGroup) return false;
     if (fStatus) {
       const s = statusOf(r);
       if (fStatus === "pending" ? !s.startsWith("pending") : s !== fStatus) return false;
     }
     return true;
-  }), [rows, fGroup, fStatus, fTest]);
+  }), [rows, fStatus, fTest]);
 
   const stats = useMemo(() => {
     const main = rows.filter((r) => (fTest === "test" ? Number(r.is_test) : fTest === "participants" ? !Number(r.is_test) : true));
@@ -47,14 +45,12 @@ function Dashboard() {
     return {
       invited: main.length,
       pending: c((r) => r.access_status === "pending"),
-      control: c((r) => r.condition === "control"),
-      treatment: c((r) => r.condition === "treatment"),
+      started: c((r) => r.status === "active" || r.status === "ended"),
       active: c((r) => r.status === "active"),
-      ended: c((r) => r.status === "ended"),
-      controlEnded: c((r) => r.condition === "control" && r.status === "ended"),
-      treatmentEnded: c((r) => r.condition === "treatment" && r.status === "ended"),
+      completed: c((r) => r.end_reason === "completed"),
+      stopped: c((r) => r.status === "ended" && r.end_reason !== "completed"),
       errors: c((r) => Number(r.error_flag)),
-      linkOpened: c((r) => Number(r.final_assessment_link_opened)),
+      orders: Object.entries(main.filter((r) => r.condition_order).reduce((m, r) => ((m[r.condition_order] = (m[r.condition_order] || 0) + 1), m), {})),
     };
   }, [rows, fTest]);
 
@@ -81,32 +77,30 @@ function Dashboard() {
   return (
     <>
       <p className="eyebrow">Pilot study</p>
-      <h1 className="title">Sessions overview</h1>
+      <h1 className="title">Participants overview</h1>
       <hr className="rule" />
       <div className="stats">
         <div className="stat"><b>{stats.invited}</b>invited</div>
         <div className="stat"><b>{stats.pending}</b>awaiting approval</div>
-        <div className="stat"><b>{stats.control} / {stats.treatment}</b>assigned control / treatment</div>
-        <div className="stat"><b>{stats.active}</b>active now</div>
-        <div className="stat"><b>{stats.controlEnded} / {stats.treatmentEnded}</b>ended control / treatment</div>
-        <div className="stat"><b>{stats.linkOpened}</b>final link opened<div className="small muted">completion: unknown</div></div>
-        <div className="stat"><b style={{ color: stats.errors ? "var(--red)" : undefined }}>{stats.errors}</b>sessions with errors</div>
+        <div className="stat"><b>{stats.started}</b>started</div>
+        <div className="stat"><b>{stats.active}</b>in progress now</div>
+        <div className="stat"><b>{stats.completed}</b>completed</div>
+        <div className="stat"><b>{stats.stopped}</b>stopped / withdrawn</div>
+        <div className="stat"><b style={{ color: stats.errors ? "var(--red)" : undefined }}>{stats.errors}</b>with tutor errors</div>
+        <div className="stat" style={{ gridColumn: "span 2" }}>condition orders used<div className="small" style={{ marginTop: 4 }}>{stats.orders.length ? stats.orders.map(([o, n]) => <span key={o} className="pill ready" style={{ marginRight: 6, marginBottom: 4 }}>{o.split(",").join(" > ")}: {n}</span>) : "none yet"}</div></div>
       </div>
 
       <div className="panel">
-        <h3>Sessions</h3>
+        <h3>Participants</h3>
         <div className="row" style={{ marginBottom: 10 }}>
           <select value={fTest} onChange={(e) => setFTest(e.target.value)} style={{ width: 190 }}>
             <option value="participants">Participant data</option>
-            <option value="test">Test sessions only</option>
+            <option value="test">Test participants only</option>
             <option value="all">All</option>
-          </select>
-          <select value={fGroup} onChange={(e) => setFGroup(e.target.value)} style={{ width: 160 }}>
-            <option value="">All groups</option><option value="control">Control</option><option value="treatment">Treatment</option>
           </select>
           <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={{ width: 210 }}>
             <option value="">All statuses</option><option value="pending">Pending approval</option><option value="approved (not opened)">Approved, not opened</option>
-            <option value="ready">Ready (opened)</option><option value="active">Active</option><option value="ended">Ended</option><option value="blocked">Blocked</option>
+            <option value="ready (not started)">Ready, not started</option><option value="active">In progress</option><option value="completed">Completed</option><option value="ended">Stopped</option><option value="blocked">Blocked</option>
           </select>
           <span className="muted small">Auto-refreshes every 5 s. {filtered.length} rows.</span>
         </div>
@@ -122,12 +116,12 @@ function Dashboard() {
           }}>Block / withdraw selected</button>
           <button className="small secondary" disabled={!selectedIds.length} onClick={() => act("unblock", selectedIds)}>Unblock selected</button>
           <button className="small danger" disabled={!selectedIds.length} onClick={() => {
-            const started = rows.filter((r) => sel[r.participant_id] && r.session_id).map((r) => r.participant_id);
+            const started = rows.filter((r) => sel[r.participant_id] && r.status).map((r) => r.participant_id);
             if (!started.length) {
               if (confirm(`Delete ${selectedIds.length} participant(s)? Their code stops working. This cannot be undone.`)) act("delete", selectedIds, { reason: "deleted by researcher" });
               return;
             }
-            const reason = prompt(`${started.join(", ")} already started. Deleting PERMANENTLY erases their session and chat transcript (their group slot stays used).\n\nTip: download a backup first. Type a reason to continue:`);
+            const reason = prompt(`${started.join(", ")} already started. Deleting PERMANENTLY erases their answers and chat transcripts (their condition-order slot stays used).\n\nTip: download a backup first. Type a reason to continue:`);
             if (!reason) return;
             if (prompt('Type DELETE to confirm') !== "DELETE") return setMsg("Delete cancelled.");
             act("delete", selectedIds, { reason, force: true });
@@ -139,30 +133,31 @@ function Dashboard() {
             <thead>
               <tr>
                 <th><input type="checkbox" style={{ width: "auto" }} onChange={(e) => { const v = e.target.checked; const n = {}; filtered.forEach((r) => (n[r.participant_id] = v)); setSel(n); }} /></th>
-                <th>Participant</th><th>Access code</th><th>Group</th><th>Status</th><th>Start</th><th>Deadline</th><th>Remaining</th>
-                <th>Msgs</th><th>End reason</th><th>Final link</th><th>Error</th><th></th>
+                <th>Participant</th><th>Access code</th><th>Condition order</th><th>Status</th><th>Progress</th><th>Now on</th><th>Chat time left</th>
+                <th>Started</th><th>Answers</th><th>End reason</th><th>Error</th><th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((r) => {
                 const s = statusOf(r);
-                const rem = r.status === "active" ? Date.parse(r.expires_at) - nowServer : null;
-                const pill = r.session_id ? r.status : r.access_status;
+                const ac = r.active_chat ? r.active_chat.split("|") : null;
+                const rem = ac ? Date.parse(ac[2]) - nowServer : null;
+                const pill = r.status === "ended" && r.end_reason === "completed" ? "ready" : r.status || r.access_status;
                 return (
                   <tr key={r.participant_id}>
                     <td><input type="checkbox" style={{ width: "auto" }} checked={!!sel[r.participant_id]} onChange={(e) => setSel({ ...sel, [r.participant_id]: e.target.checked })} /></td>
                     <td><b>{r.participant_id}</b>{Number(r.is_test) ? <span className="pill" style={{ marginLeft: 6 }}>test</span> : null}</td>
                     <td className="mono">{r.access_code} <a className="small" href="#" onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(linkOf(r.access_code)); setMsg(`Link for ${r.participant_id} copied.`); }}>copy link</a></td>
-                    <td>{r.condition || "-"}</td>
+                    <td className="small">{r.condition_order ? r.condition_order.split(",").join(" > ") : "-"}</td>
                     <td><span className={`pill ${pill}`}>{s}</span></td>
+                    <td className="mono">{r.total_steps ? `${r.status === "ended" && r.end_reason === "completed" ? r.total_steps : Number(r.current_step)} / ${r.total_steps}` : "-"}</td>
+                    <td className="small">{r.current_where || "-"}</td>
+                    <td className="mono">{rem !== null ? `${fmtLeft(rem)} (${ac[0]})` : "-"}</td>
                     <td>{fmtTime(r.started_at)}</td>
-                    <td>{fmtTime(r.expires_at)}</td>
-                    <td className="mono">{rem !== null ? fmtLeft(rem) : "-"}</td>
-                    <td>{r.session_id ? `${r.user_msgs} / ${r.msg_count}` : "-"}</td>
+                    <td>{r.status ? r.answers : "-"}</td>
                     <td>{r.end_reason || "-"}</td>
-                    <td>{Number(r.final_assessment_link_opened) ? "opened" : "-"}</td>
                     <td>{Number(r.error_flag) ? <span className="pill err">error</span> : ""}</td>
-                    <td>{r.session_id ? <a className="linkish" style={{ fontSize: 12.5 }} href={`/admin/session/${r.session_id}`}>Open</a> : ""}</td>
+                    <td>{r.status ? <a className="linkish" style={{ fontSize: 12.5 }} href={`/admin/p/${encodeURIComponent(r.participant_id)}`}>Open</a> : ""}</td>
                   </tr>
                 );
               })}
@@ -170,7 +165,7 @@ function Dashboard() {
             </tbody>
           </table>
         </div>
-        <p className="small muted">Msgs = participant messages / all saved messages. Group is shown only to researchers, never to participants.</p>
+        <p className="small muted">Progress = pages finished / total pages. Condition order is assigned automatically and balanced across all possible orders.</p>
       </div>
 
       <div className="grid2">
@@ -179,7 +174,7 @@ function Dashboard() {
           <div className="row">
             <div style={{ width: 120 }}><label>How many</label><input type="number" min={1} max={500} value={gen.count} onChange={(e) => setGen({ ...gen, count: e.target.value })} /></div>
             <div style={{ width: 200 }}><label>Batch label (optional)</label><input value={gen.label} onChange={(e) => setGen({ ...gen, label: e.target.value })} /></div>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 38 }}><input type="checkbox" style={{ width: "auto" }} checked={gen.is_test} onChange={(e) => setGen({ ...gen, is_test: e.target.checked })} /> Test sessions</label>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 38 }}><input type="checkbox" style={{ width: "auto" }} checked={gen.is_test} onChange={(e) => setGen({ ...gen, is_test: e.target.checked })} /> Test participants</label>
           </div>
           <label>Or paste participant IDs agreed with the questionnaire team (one per line; this overrides "How many")</label>
           <textarea rows={3} value={gen.custom_ids} onChange={(e) => setGen({ ...gen, custom_ids: e.target.value })} placeholder={"e.g.\nS001\nS002"} />
@@ -197,14 +192,17 @@ function Dashboard() {
           <h3>Exports (UTF-8, administrators only)</h3>
           <p className="small muted">Scope follows the first filter above: <b>{fTest === "participants" ? "participant data only" : fTest === "test" ? "test sessions only" : "all"}</b>.</p>
           <ul className="export-list">
-            <li><a className="linkish" href={`/api/admin/export/sessions?scope=${fTest}`}>Session summary (CSV)</a></li>
-            <li><a className="linkish" href={`/api/admin/export/messages?scope=${fTest}`}>Messages (CSV)</a></li>
-            <li><a className="linkish" href={`/api/admin/export/messages-json?scope=${fTest}`}>Messages (JSON)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/responses-wide?scope=${fTest}`}>Answers, one row per participant (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/responses?scope=${fTest}`}>Answers, one row per answer (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/runs?scope=${fTest}`}>Participant summary (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/chats?scope=${fTest}`}>Chats summary (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages?scope=${fTest}`}>Chat messages (CSV)</a></li>
+            <li><a className="linkish" href={`/api/admin/export/messages-json?scope=${fTest}`}>Chat messages (JSON)</a></li>
             <li><a className="linkish" href="/api/admin/export/events">Event log (CSV)</a></li>
             <li><a className="linkish navy" href="/api/admin/export/invitations">Invitation list (codes + links) (CSV)</a></li>
             <li><a className="linkish navy" href="/api/admin/export/backup">Full database backup (JSON)</a></li>
           </ul>
-          <p className="small muted">Individual readable transcripts: open a session, then click "Download transcript".</p>
+          <p className="small muted">Readable chat transcripts: open a participant, then click "Download transcripts".</p>
         </div>
       </div>
       <span style={{ display: "none" }}>{tick}</span>

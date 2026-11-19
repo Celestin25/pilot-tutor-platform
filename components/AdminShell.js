@@ -67,7 +67,7 @@ export default function AdminShell({ children }) {
   if (ok === null) return <div className="admin muted">Loading...</div>;
   if (!ok) return <Login onDone={check} />;
   async function logout() { await aapi("/api/admin/logout", {}); setOk(false); }
-  const links = [{ href: "/admin", label: "Sessions" }, { href: "/admin/settings", label: "Study settings" }];
+  const links = [{ href: "/admin", label: "Participants" }, { href: "/admin/design", label: "Study design" }, { href: "/admin/settings", label: "Settings" }];
   return (
     <>
       <TopNav

@@ -1,6 +1,6 @@
 import { adminRoute } from "@/lib/auth";
 import { db, one, all, q } from "@/lib/db";
-import { ensureAllocationCapacity, getSession, endSession } from "@/lib/session";
+import { getRun, endRun } from "@/lib/run";
 import { json, logEvent, newAccessCode, tokenHash, nowIso, normalizeCode } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
@@ -38,8 +38,6 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
     });
     const c = await db();
     await c.batch(stmts, "write");
-    const unstarted = await one(`SELECT COUNT(*) AS n FROM participants p WHERE is_test=? AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.participant_id=p.participant_id)`, [isTest]);
-    await ensureAllocationCapacity(isTest ? "test" : "main", Number(unstarted.n) + 4);
     await logEvent({ type: "invitations_created", details: { count: created.length, is_test: isTest, label }, admin });
     return json({ created });
   }
@@ -63,9 +61,9 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
     const reason = String(body.reason || "").slice(0, 300);
     for (const id of ids) {
       await q(`UPDATE participants SET access_status='blocked' WHERE participant_id=?`, [id]);
-      const s = await getSession(id);
-      if (s && (s.status === "active" || s.status === "ready")) await endSession(s, "withdrawn", admin, reason);
-      await logEvent({ participant_id: id, session_id: s?.session_id || null, type: "participant_blocked", details: { reason }, admin });
+      const run = await getRun(id);
+      if (run && (run.status === "active" || run.status === "ready")) await endRun(run, "withdrawn", admin, reason);
+      await logEvent({ participant_id: id, type: "participant_blocked", details: { reason }, admin });
     }
     return json({ ok: true });
   }
@@ -80,25 +78,27 @@ export const POST = adminRoute(async (req, _ctx, admin) => {
   }
 
   if (body.action === "delete") {
-    // Default: only never-used invitations. With force=true also started/ended participants
-    // (session + messages removed; allocation slot stays consumed so the sequence is not reshuffled).
+    // Default: only never-used invitations. With force=true also started participants (all their data is erased;
+    // their condition-order slot stays used so the counterbalancing sequence is not reshuffled).
     const deleted = [], kept = [];
     const c = await db();
     for (const id of ids) {
-      const s = await getSession(id);
-      if (s && !body.force) { kept.push(id); continue; }
-      const summary = s ? {
-        session_id: s.session_id, condition: s.condition, status: s.status, started_at: s.started_at, ended_at: s.ended_at, end_reason: s.end_reason,
-        messages: Number((await one(`SELECT COUNT(*) AS n FROM messages WHERE session_id=?`, [s.session_id])).n),
-      } : null;
+      const run = await getRun(id);
+      const old = await one(`SELECT session_id FROM sessions WHERE participant_id=?`, [id]);
+      if ((run || old) && !body.force) { kept.push(id); continue; }
+      const summary = run ? { order: run.condition_order, status: run.status, step: Number(run.current_step), end_reason: run.end_reason,
+        answers: Number((await one(`SELECT COUNT(*) AS n FROM responses WHERE participant_id=?`, [id])).n) } : null;
       await c.batch([
-        { sql: `DELETE FROM messages WHERE session_id IN (SELECT session_id FROM sessions WHERE participant_id=?)`, args: [id] },
+        { sql: `DELETE FROM messages WHERE session_id IN (SELECT chat_id FROM chats WHERE participant_id=?) OR session_id IN (SELECT session_id FROM sessions WHERE participant_id=?)`, args: [id, id] },
+        { sql: `DELETE FROM chats WHERE participant_id=?`, args: [id] },
+        { sql: `DELETE FROM responses WHERE participant_id=?`, args: [id] },
+        { sql: `DELETE FROM runs WHERE participant_id=?`, args: [id] },
         { sql: `DELETE FROM sessions WHERE participant_id=?`, args: [id] },
         { sql: `UPDATE allocation SET consumed_by=? WHERE consumed_by=?`, args: ["deleted:" + id + ":" + Date.now(), id] },
         { sql: `DELETE FROM participants WHERE participant_id=?`, args: [id] },
       ], "write");
       deleted.push(id);
-      await logEvent({ participant_id: id, session_id: s?.session_id || null, type: "participant_deleted", details: { reason: String(body.reason || "").slice(0, 300), had_session: !!s, ...summary }, admin });
+      await logEvent({ participant_id: id, type: "participant_deleted", details: { reason: String(body.reason || "").slice(0, 300), had_run: !!run, ...summary }, admin });
     }
     return json({ deleted, kept });
   }
