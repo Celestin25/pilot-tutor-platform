@@ -92,6 +92,22 @@ function ActivePage({ code, st, setSt, refresh }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const entered = useRef(performance.now());
+  const timed = !!page.time_limit_seconds;
+  const pageDeadline = useRef(timed ? performance.now() + page.remaining_ms : null);
+  const [pageLeft, setPageLeft] = useState(timed ? page.remaining_ms : null);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const submitted = useRef(false);
+  useEffect(() => {
+    if (!timed) return;
+    const t = setInterval(() => {
+      const l = pageDeadline.current - performance.now();
+      setPageLeft(l);
+      if (l <= 0 && !submitted.current) { clearInterval(t); next(true); }
+    }, 250);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timed]);
   const chat = page.chat;
   const chatItem = page.items.find((i) => i.type === "chat");
   const chatDone = !chat || chat.status === "ended";
@@ -102,12 +118,17 @@ function ActivePage({ code, st, setSt, refresh }) {
     return <ChatPage code={code} page={page} chatItem={chatItem} chat={chat} setSt={setSt} refresh={refresh} />;
   }
 
-  async function next() {
+  async function next(auto) {
+    if (submitted.current) return;
+    if (auto === true) submitted.current = true;
     setBusy(true); setNote("");
-    const { status, data } = await api("/api/p/answer", { code, step_key: page.key, answers, page_seconds: Math.round((performance.now() - entered.current) / 100) / 10 });
+    const { status, data } = await api("/api/p/answer", { code, step_key: page.key, answers: answersRef.current, page_seconds: Math.round((performance.now() - entered.current) / 100) / 10 });
     setBusy(false);
     if (status === 200) { window.scrollTo({ top: 0 }); setSt(data.state); return; }
-    if (status === 400 && data.errors) { setErrors(data.errors); setNote("Please answer the highlighted questions."); return; }
+    if (status === 400 && data.errors) {
+      if (auto === true) { submitted.current = false; setTimeout(() => next(true), 1500); return; } // server clock a bit behind: retry
+      setErrors(data.errors); setNote("Please answer the highlighted questions."); return;
+    }
     if (data.state) setSt(data.state); else setNote(data.message || data.error || "Something went wrong. Please try again.");
   }
   async function startChat() {
@@ -119,9 +140,12 @@ function ActivePage({ code, st, setSt, refresh }) {
 
   return (
     <div className="page">
-      <TopNav title="Learning session" right={<div className="navblock">Page {page.index + 1}<br />of {page.total}</div>} />
+      <TopNav title="Learning session" right={timed
+        ? <div className={"timer-block" + (pageLeft < 15000 ? " low" : "")} aria-live="polite"><small>Time left</small><b>{fmt(pageLeft)}</b></div>
+        : <div className="navblock">Page {page.index + 1}<br />of {page.total}</div>} />
       <div className="progress"><div style={{ width: `${progress}%` }} /></div>
       <main className="survey">
+        {timed && <p className="notice small" style={{ margin: 0 }}>This page has a time limit of {fmt(page.time_limit_seconds * 1000)}. When the time is up, you move on automatically.</p>}
         {chatItem && (
           <div className="q-card">
             {chat.status === "not_started" ? (
@@ -141,7 +165,7 @@ function ActivePage({ code, st, setSt, refresh }) {
                 onChange={(v) => { setAnswers((a) => ({ ...a, [it.id]: v })); setErrors((e) => ({ ...e, [it.id]: undefined })); }} />
         ))}
         {note && <p className="error">{note}</p>}
-        {chatDone && <div className="survey-nav"><button onClick={next} disabled={busy}>{page.index + 1 === page.total ? "Finish" : "Next"}</button></div>}
+        {chatDone && <div className="survey-nav"><button onClick={() => next(false)} disabled={busy}>{page.index + 1 === page.total ? "Finish" : "Next"}</button></div>}
       </main>
     </div>
   );

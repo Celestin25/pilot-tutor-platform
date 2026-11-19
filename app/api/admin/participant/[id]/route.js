@@ -12,7 +12,7 @@ async function load(id) {
   let steps = [], d = null;
   if (run) {
     d = runData(run);
-    steps = d.steps.map((s, i) => ({ index: i, key: s.key, section: s.section, condition: s.condition, position: s.position, page_id: s.page.id,
+    steps = d.steps.map((s, i) => ({ index: i, key: s.key, block: s.block_name || s.section, condition: s.condition, position: s.position, page_id: s.page.id, time_limit_seconds: s.page.time_limit_seconds || null,
       items: s.page.items.map((it) => ({ id: it.id, type: it.type })) }));
   }
   const chatsRaw = await all(`SELECT * FROM chats WHERE participant_id=? ORDER BY started_at`, [id]);

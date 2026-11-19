@@ -20,10 +20,11 @@ Local: `npm install && ADMIN_PASSWORD=x LLM_MOCK=1 npm run dev`. Tables are crea
 
 ## 2. Building the study (Admin, Study design)
 
-- **Conditions**: ID, name, tutor language rule and opening message for each condition. Order: counterbalanced (all possible orders used equally, in shuffled blocks) or fixed.
-- **Sections**: 1. Start (shown once), 2. Task block (repeated once per condition), 3. End (demographics). Each section has pages; each page has questions.
-- **Question types**: information text, slider (min, max, start, step, end labels), multiple choice (single or several answers), text answer, tutor chat (length in minutes, task/topic for the tutor). Any question text can differ per condition.
-- The page shows the **estimated total time** (target: 20 minutes or less).
+The study is an ordered list, top to bottom, that the researcher arranges freely:
+- **Blocks**: named sets of pages. A block can be **General** (e.g. introduction, demographics, anywhere in the flow) or **linked to a condition** (L1, L2, Mixed), so it has its own questions and its chats use that condition's tutor language.
+- **Condition groups**: contain blocks whose order is **counterbalanced** (every possible order used equally across participants, in shuffled sets) or **fixed**.
+- **Pages** hold questions: information text, slider (min, max, start, step, end labels; a single dot, answered only once moved or clicked), multiple choice (one or several answers), text answer, tutor chat (length in minutes, topic for the tutor). Each page can have an optional **time limit**; when it runs out the participant moves on automatically.
+- Blocks, pages and questions can be moved up and down, duplicated and deleted. The page shows the **estimated total time** (target 20 minutes or less) and has a **Try it as a participant** button.
 - Saving creates a frozen version. Participants keep the version that was active when they first opened their link.
 
 ## 3. Data
@@ -32,4 +33,4 @@ Exports: answers (one row per participant, columns like `understanding_L1`, `und
 
 ## 4. Tests
 
-`tests/acceptance.py` (40 checks) runs in GitHub Actions on every push: approval, counterbalancing across 12 simultaneous arrivals, chat timer and expiry, duplicate-click protection, required-answer validation, per-condition text and tutor rules, demographics at the end, exports, stop and delete.
+`tests/acceptance.py` (44 checks) runs in GitHub Actions on every push: approval, counterbalancing across 12 simultaneous arrivals, chat timer and expiry, duplicate-click protection, required-answer validation, per-condition text and tutor rules, demographics at the end, exports, stop and delete.

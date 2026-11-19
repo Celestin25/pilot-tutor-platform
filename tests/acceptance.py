@@ -36,22 +36,25 @@ COND = [
     {"id": "L2", "label": "French only", "tutor_instruction": "RULE-FRENCH-ONLY", "opening_message": "Bonjour"},
     {"id": "MIX", "label": "Mixed", "tutor_instruction": "RULE-MIXED", "opening_message": "Hello, bonjour"},
 ]
+def task(c, topic, q="How well?"):
+    return {"type": "block", "id": f"task_{c}", "name": f"Task {c}", "condition": c, "pages": [
+        {"id": "chat", "items": [{"id": "chat", "type": "chat", "duration_seconds": 30, "text": "Chat now", "tutor_task": topic}]},
+        {"id": "ratings", "items": [
+            {"id": "understanding", "type": "slider", "text": q, "min": 0, "max": 10, "start": 5, "required": True},
+            {"id": "lang", "type": "mc", "text": "Language used", "options": ["English", "French", "Both"], "required": True}]}]}
 FLOW = {
-    "conditions": COND, "order_mode": "counterbalanced",
-    "sections": {
-        "start": [{"id": "welcome", "items": [{"id": "w", "type": "info", "text": "Welcome"}]}],
-        "per_condition": [
-            {"id": "task", "items": [{"id": "chat", "type": "chat", "duration_seconds": 30, "text": "Chat now",
-                                      "tutor_task": {"all": "", "by": {"L1": "TOPIC-A", "L2": "TOPIC-B", "MIX": "TOPIC-C"}}}]},
-            {"id": "ratings", "items": [
-                {"id": "understanding", "type": "slider", "text": {"all": "How well?", "by": {"L2": "Comment?"}}, "min": 0, "max": 10, "start": 5, "required": True},
-                {"id": "lang", "type": "mc", "text": "Language used", "options": ["English", "French", "Both"], "required": True}]},
-        ],
-        "end": [{"id": "demographics", "items": [
+    "conditions": COND,
+    "elements": [
+        {"type": "block", "id": "intro", "name": "Intro", "pages": [{"id": "welcome", "items": [{"id": "w", "type": "info", "text": "Welcome"}]}]},
+        {"type": "block", "id": "demo", "name": "Demographics", "pages": [{"id": "about", "items": [
             {"id": "age", "type": "mc", "text": "Age", "options": ["18-25", "26+"], "required": True},
             {"id": "l1", "type": "text", "text": "First language", "required": True},
-            {"id": "fr_level", "type": "slider", "text": "French level", "min": 0, "max": 10, "start": 5, "required": True}]}],
-    },
+            {"id": "fr_level", "type": "slider", "text": "French level", "min": 0, "max": 10, "start": 5, "required": True}]}]},
+        {"type": "group", "id": "langs", "name": "Languages", "order": "counterbalanced",
+         "blocks": [task("L1", "TOPIC-A"), task("L2", "TOPIC-B", "Comment?"), task("MIX", "TOPIC-C")]},
+        {"type": "block", "id": "outro", "name": "Outro", "pages": [{"id": "quick", "time_limit_seconds": 5, "items": [
+            {"id": "final_rating", "type": "slider", "text": "Overall", "min": 1, "max": 7, "start": 4, "required": True}]}]},
+    ],
     "end_message": "THANK-YOU-END", "end_url": "",
 }
 
@@ -60,7 +63,7 @@ cfg = aget("/api/admin/settings")["config"]
 cfg.update(provider="mock", flow_json=json.dumps(FLOW))
 r = apost("/api/admin/settings", cfg)
 ok(r.get("ok") is True, f"study design saved ({r.get('prompt_version', r)})")
-bad = dict(FLOW, sections=dict(FLOW["sections"], end=[{"id": "x", "items": [{"id": "age", "type": "slider", "min": 5, "max": 1}]}]))
+bad = dict(FLOW, elements=FLOW["elements"] + [{"type": "block", "id": "x", "name": "X", "pages": [{"id": "p", "items": [{"id": "age", "type": "slider", "min": 5, "max": 1}]}]}])
 r = apost("/api/admin/settings", dict(cfg, flow_json=json.dumps(bad)))
 ok(r.get("_status") == 400, "invalid design rejected (duplicate ID, bad slider range)")
 
@@ -85,9 +88,11 @@ s, d = post("/api/p/state", {"code": p1}); ok(rows["P001"]["condition_order"] ==
 
 order = rows["P001"]["condition_order"].split(",")
 s, d = post("/api/p/start", {"code": p1}); ok(d["phase"] == "active" and d["page"]["index"] == 0, "start shows page 1 (start section)")
-ok(d["page"]["total"] == 1 + 2 * 3 + 1, f"page count = start + 2 pages x 3 conditions + end ({d['page']['total']})")
+ok(d["page"]["total"] == 1 + 1 + 2 * 3 + 1, f"page count = intro + demographics + 2 pages x 3 conditions + outro ({d['page']['total']})")
 s, d = post("/api/p/answer", {"code": p1, "step_key": d["page"]["key"], "answers": {}})
-page = d["state"]["page"]; ok(page["chat"]["status"] == "not_started" and page["key"].startswith(f"c1.{order[0]}"), "page 2 is the first condition's chat")
+ok(d["state"]["page"]["key"] == "demo.about", "demographics block appears where the researcher placed it (page 2)")
+s, d = post("/api/p/answer", {"code": p1, "step_key": "demo.about", "answers": {"age": "18-25", "l1": "Arabic, français", "fr_level": 8}})
+page = d["state"]["page"]; ok(page["chat"]["status"] == "not_started" and page["key"] == f"task_{order[0]}.chat", "page 3 is the first condition's chat")
 s, d = post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {}}); ok(s == 409 and d["error"] == "chat_open", "cannot skip a chat before it is finished")
 with cf.ThreadPoolExecutor(3) as ex: st = list(ex.map(lambda _: post("/api/p/chat-start", {"code": p1, "step_key": page["key"]}), range(3)))
 ok(len({x[1]["page"]["chat"]["remaining_ms"] // 2000 for x in st}) == 1, "parallel chat start creates one timer")
@@ -102,13 +107,13 @@ ok(f"RULE-{ {'L1':'ENGLISH-ONLY','L2':'FRENCH-ONLY','MIX':'MIXED'}[order[0]] }" 
 s, d = post("/api/p/chat-finish", {"code": p1, "step_key": page["key"]}); ok(d["page"]["chat"]["status"] == "ended", "participant can finish a chat early")
 s, d = post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {}}); page = d["state"]["page"]
 ok(page["key"].endswith("ratings"), "after chat: the rating page")
-ok(page["items"][0]["text"] == ("Comment?" if order[0] == "L2" else "How well?"), "question text varies by condition")
+ok(page["items"][0]["text"] == ("Comment?" if order[0] == "L2" else "How well?"), "each condition block has its own questions")
 s, d = post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {"lang": "English"}}); ok(s == 400 and "understanding" in d["errors"], "untouched required slider is rejected")
 s, d = post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {"understanding": 11, "lang": "English"}}); ok(s == 400, "out-of-range slider value rejected")
 s, d = post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {"understanding": 7, "lang": "Klingon"}}); ok(s == 400, "unknown multiple-choice option rejected")
 with cf.ThreadPoolExecutor(3) as ex:
     rs = list(ex.map(lambda _: post("/api/p/answer", {"code": p1, "step_key": page["key"], "answers": {"understanding": 7, "lang": "English"}, "page_seconds": 9.5}), range(3)))
-s, d = post("/api/p/state", {"code": p1}); ok(d["page"]["index"] == 3 and d["page"]["key"].startswith(f"c2.{order[1]}"), "double submit advances exactly one page; part 2 uses the second condition")
+s, d = post("/api/p/state", {"code": p1}); ok(d["page"]["index"] == 4 and d["page"]["key"] == f"task_{order[1]}.chat", "double submit advances exactly one page; next is the second condition")
 
 # part 2: chat expiry with a reply in progress
 k = d["page"]["key"]; post("/api/p/chat-start", {"code": p1, "step_key": k})
@@ -120,11 +125,12 @@ ok(not any("late" in m["text"] and m["role"] == "assistant" for m in d["state"][
 s, d = post("/api/p/chat", {"code": p1, "step_key": k, "request_id": "reqlate002", "text": "x"}); ok(s == 409, "chat rejected after the deadline")
 
 # finish the rest
-def finish_all(code):
+def finish_all(code, stop=None):
     for _ in range(20):
         s, d = post("/api/p/state", {"code": code})
         if d["phase"] != "active": return d
         pg = d["page"]
+        if stop and stop(pg): return d
         if pg.get("chat") and pg["chat"]["status"] != "ended":
             post("/api/p/chat-start", {"code": code, "step_key": pg["key"]}); post("/api/p/chat-finish", {"code": code, "step_key": pg["key"]})
         ans = {}
@@ -134,12 +140,17 @@ def finish_all(code):
             if it["type"] == "text": ans[it["id"]] = "Arabic, français"
         post("/api/p/answer", {"code": code, "step_key": pg["key"], "answers": ans})
     return post("/api/p/state", {"code": code})[1]
-d = finish_all(p1)
+d = finish_all(p1, stop=lambda pg: pg["key"] == "outro.quick")
+pg = d["page"]; ok(pg.get("time_limit_seconds") == 5 and pg["remaining_ms"] <= 5000, "timed page reports its time limit")
+s, d = post("/api/p/answer", {"code": p1, "step_key": pg["key"], "answers": {}}); ok(s == 400, "timed page: required answer still needed before time is up")
+time.sleep(5.5)
+s, d = post("/api/p/answer", {"code": p1, "step_key": pg["key"], "answers": {}}); ok(s == 200, "timed page: moves on without an answer once time is up")
+d = d["state"]
 ok(d["phase"] == "ended" and d["end_reason"] == "completed" and d["end_message"] == "THANK-YOU-END", "study completes with the thank-you message")
 det = aget("/api/admin/participant/P001")
 ok([c["condition"] for c in sorted(det["chats"], key=lambda c: c["position"])] == order, "three chats, one per condition, in the assigned order")
-last = [r for r in det["responses"] if r["section"] == "end"]
-ok(len(last) == 3 and all(r["step_index"] == 7 for r in last), "demographic answers are collected at the end")
+demo = [r for r in det["responses"] if r["section"] == "Demographics"]
+ok(len(demo) == 3 and all(r["step_index"] == 1 for r in demo), "demographic answers saved with their block name")
 s, d = post("/api/p/start", {"code": p1}); ok(d["phase"] == "ended", "a finished participant cannot restart")
 
 p2 = codes["P002"]; post("/api/p/start", {"code": p2}); s, d = post("/api/p/state", {"code": p2})

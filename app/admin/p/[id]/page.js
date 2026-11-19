@@ -90,12 +90,12 @@ function Detail({ id }) {
       <div className="panel">
         <h3>Pages and answers</h3>
         <div className="table-wrap" style={{ maxHeight: "none" }}><table>
-          <thead><tr><th>#</th><th>Section</th><th>Page</th><th>Question</th><th>Answer</th><th>Page time</th></tr></thead>
+          <thead><tr><th>#</th><th>Block</th><th>Page</th><th>Question</th><th>Answer</th><th>Page time</th></tr></thead>
           <tbody>
             {d.steps.map((s) => {
               const ans = byStep[s.key] || [];
               const done = run.status === "ended" && run.end_reason === "completed" ? true : s.index < Number(run.current_step);
-              const label = s.section === "condition" ? `Part ${s.position} (${s.condition})` : s.section;
+              const label = `${s.block}${s.condition ? ` (${s.condition}${s.position ? `, ${s.position}` : ""})` : ""}`;
               if (!ans.length) return (
                 <tr key={s.key}><td>{s.index + 1}</td><td>{label}</td><td>{s.page_id}</td>
                   <td className="muted">{s.items.map((i) => i.type).join(", ")}</td><td className="muted">{done ? "(no answers on this page)" : s.index === Number(run.current_step) && run.status === "active" ? "current page" : "not reached"}</td><td></td></tr>

@@ -35,11 +35,11 @@ export const GET = adminRoute(async (req, { params }) => {
   if (kind === "responses") {
     // long format: one row per answer
     const rows = await all(`
-      SELECT x.participant_id, r.condition_order, x.section, x.condition, x.position AS condition_position, x.step_index, x.page_id,
+      SELECT x.participant_id, r.condition_order, x.section AS block, x.condition, x.position AS order_position, x.step_index, x.page_id,
              x.item_id, x.item_type, x.item_text, x.value, x.page_seconds, x.answered_at, r.test_run
       FROM responses x JOIN runs r ON r.participant_id=x.participant_id
       WHERE ${testClause("r.test_run")} ORDER BY x.participant_id, x.step_index, x.rowid`);
-    const cols = ["participant_id", "condition_order", "section", "condition", "condition_position", "step_index", "page_id", "item_id", "item_type", "item_text", "value", "page_seconds", "answered_at", "test_run"];
+    const cols = ["participant_id", "condition_order", "block", "condition", "order_position", "step_index", "page_id", "item_id", "item_type", "item_text", "value", "page_seconds", "answered_at", "test_run"];
     return file(csv(rows, cols), `responses_long_${scope}_${stamp}.csv`, "text/csv");
   }
 

@@ -21,7 +21,7 @@ export const GET = adminRoute(async () => {
       const steps = JSON.parse((await all(`SELECT steps_json FROM runs WHERE participant_id=?`, [r.participant_id]))[0].steps_json).steps;
       r.total_steps = steps.length;
       const s = steps[Number(r.current_step)];
-      r.current_where = r.status === "active" && s ? (s.section === "condition" ? `Part ${s.position} (${s.condition}): ${s.page.id}` : `${s.section}: ${s.page.id}`) : "";
+      r.current_where = r.status === "active" && s ? `${s.block_name || s.section}${s.condition ? ` (${s.condition})` : ""}: ${s.page.id}` : "";
     }
     delete r.has_run;
   }

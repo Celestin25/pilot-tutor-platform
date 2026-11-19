@@ -36,9 +36,12 @@ export async function POST(req) {
       if (!chat || chat.status !== "ended") return json({ error: "chat_open", message: "Please finish the chat first." }, 409);
     }
     const answers = body.answers || {};
+    // A timed page that has run out may be submitted with missing answers.
+    const lim = Number(step.page.time_limit_seconds);
+    const timedOut = lim > 0 && Date.now() >= Date.parse(run.step_entered_at || run.started_at) + lim * 1000 - 1500;
     const errors = {};
     const items = step.page.items.filter((i) => !["info", "chat"].includes(i.type));
-    for (const it of items) { const e = check(it, answers[it.id]); if (e) errors[it.id] = e; }
+    for (const it of items) { const e = check(timedOut ? { ...it, required: false } : it, answers[it.id]); if (e) errors[it.id] = e; }
     if (Object.keys(errors).length) return json({ error: "invalid", errors }, 400);
 
     const now = nowIso();
@@ -49,7 +52,7 @@ export async function POST(req) {
         sql: `INSERT INTO responses (response_id, participant_id, step_key, step_index, section, condition, position, page_id, item_id, item_type, item_text, value, page_seconds, answered_at)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
               ON CONFLICT(participant_id, step_key, item_id) DO UPDATE SET value=excluded.value, page_seconds=excluded.page_seconds, answered_at=excluded.answered_at`,
-        args: [uid("r_"), p.participant_id, step.key, idx, step.section, step.condition, step.position, step.page.id, it.id, it.type,
+        args: [uid("r_"), p.participant_id, step.key, idx, step.block_name || step.section || "", step.condition, step.position, step.page.id, it.id, it.type,
                resolve(it.text, step.condition), Array.isArray(v) ? JSON.stringify(v) : String(v), Number.isFinite(secs) ? secs : null, now],
       };
     });
@@ -60,7 +63,7 @@ export async function POST(req) {
     const c = await db();
     const res = await c.batch(stmts, "write");
     if (res[res.length - 1].rowsAffected) {
-      await logEvent({ participant_id: p.participant_id, type: last ? "run_completed" : "page_completed", details: { step_key: step.key, page_seconds: Number.isFinite(secs) ? secs : null } });
+      await logEvent({ participant_id: p.participant_id, type: last ? "run_completed" : "page_completed", details: { step_key: step.key, page_seconds: Number.isFinite(secs) ? secs : null, timed_out: timedOut || undefined } });
     }
     return json({ ok: true, state: await participantState(p, await getRun(p.participant_id)) });
   });
