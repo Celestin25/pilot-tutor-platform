@@ -12,6 +12,19 @@ function rid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID().replace(/-/g, "");
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+/** Show simple formatting from the tutor: **bold**, # headings, - bullets (no HTML is injected). */
+function Rich({ text }) {
+  return String(text).split("\n").map((line, i) => {
+    let l = line, heading = false;
+    const h = l.match(/^\s*#{1,6}\s+(.*)$/);
+    if (h) { l = h[1]; heading = true; }
+    l = l.replace(/^(\s*)[-*]\s+/, "$1• ");
+    const parts = l.split(/\*\*(.+?)\*\*/g);
+    const content = parts.map((p, j) => (j % 2 ? <b key={j}>{p}</b> : p));
+    return <span key={i}>{heading ? <b>{content}</b> : content}{"\n"}</span>;
+  });
+}
+
 function fmt(ms) {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -298,7 +311,7 @@ function ChatPage({ code, page, chatItem, chat, setSt, refresh }) {
         <div className="msgs">
           {msgs.map((m, i) => (
             <div key={m.request_id ? m.request_id + m.role : i} className={`msg ${m.role}` + (failed && m.request_id === failed.request_id && m.role === "user" ? " failed" : "")}>
-              <div className="who">{m.role === "user" ? "You" : "Tutor"}</div>{m.text}
+              <div className="who">{m.role === "user" ? "You" : "Tutor"}</div>{m.role === "assistant" ? <Rich text={m.text} /> : m.text}
             </div>
           ))}
           {pending && <div className="typing"><span /><span /><span /> Tutor is writing...</div>}
